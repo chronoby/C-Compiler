@@ -39,18 +39,18 @@ primary_expr :
     | FLOAT
     | CHAR
     | STRING
-    | '('expression')'  // NOTE: different from present expr
+    | '('expression')'  /* NOTE: different from present expr */
     ;
 
 profix_expr :
     primary_expr
     | postfix_expr '[' expression ']'
-	| postfix_expr '(' ')'
-	| postfix_expr '(' argument_expr_list ')'
-	| postfix_expr '.' IDENTIFIER
-	| postfix_expr PTR_OP IDENTIFIER
-	| postfix_expr INC_OP
-	| postfix_expr DEC_OP
+    | postfix_expr '(' ')'
+    | postfix_expr '(' argument_expr_list ')'
+    | postfix_expr '.' IDENTIFIER
+    | postfix_expr PTR_OP IDENTIFIER
+    | postfix_expr INC_OP
+    | postfix_expr DEC_OP
     ;
 
 translation_unit : 
