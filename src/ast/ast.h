@@ -17,6 +17,66 @@ public:
 class AstExpression : public AstNode { };
 class AstStatement : public AstNode { };
 
+// --------------------------- expression -------------------------
+
+class AstExpr : public AstExpression
+{
+
+}
+
+// Type for primary_expr
+class AstPrimaryExpr : public AstExpression
+{
+public:
+    // which grammar rule is used to derive this node
+    enum class ExprType {ID, CONSTANT, PR_EXPR};
+    
+    // type of data if it is a constant
+    enum class DataType {INTEGER, HEXI, OCTAL, FLOAT, CHAR, STRING};
+    
+    AstPrimaryExpr(AstPrimaryExpr::DataType dtype, std::string val): value(val), data_type(dtype), expr_type(CONSTANT) {}
+    AstPrimaryExpr(std::string name): identifier_name(name), expr_type(ID) {}
+    AstPrimaryExpr(AstExpr* expr): expr(expr), value(""), expr_type(PR_EXPR) {}
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+// private:
+    // which grammar rule is used to derive this node
+    ExprType expr_type;
+
+    // '('expression')'
+    AstExpr* expr;
+
+    // INTEGER | HEXI | OCTAL | ...
+    DataType data_type;
+    std::string value;
+
+    // INDENTIFIER
+    std::string identifier_name;
+}
+
+class AstProfixExpr : public AstExpression
+{
+public:
+    // which grammar rule is used to derive this node
+    enum class ExprType {PRIMARY, IDX, FUNC, FUNC_PARAM, MEMBER, PTR_MEMBER, OP};
+    
+    // in term of a++ or a--
+    enum class OP {INC, DEC};
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+// private:
+    // which grammar rule is used to derive this node
+    ExprType expr_type;
+
+    AstPrimaryExpr* primary_expr;
+
+    AstProfixExpr* profix_expr;
+    
+    std::string identifier_name;
+}
+
+// ----------------------------------------------------------------
+
 class AstInt : public AstExpression
 {
 public:

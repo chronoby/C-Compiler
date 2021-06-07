@@ -24,12 +24,34 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type <stmt> stmt var_decl
 %type <type_int_node> numeric
 
-%token <string> IDENTIFIER INTEGER
-%token INT
+%token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
+%token TYPE_INT
 
 %start translation_unit
 
 %%
+
+primary_expr :
+    IDENTIFIER
+    | INTEGER
+    | HEXI
+    | OCTAL
+    | FLOAT
+    | CHAR
+    | STRING
+    | '('expression')'  // NOTE: different from present expr
+    ;
+
+profix_expr :
+    primary_expr
+    | postfix_expr '[' expression ']'
+	| postfix_expr '(' ')'
+	| postfix_expr '(' argument_expr_list ')'
+	| postfix_expr '.' IDENTIFIER
+	| postfix_expr PTR_OP IDENTIFIER
+	| postfix_expr INC_OP
+	| postfix_expr DEC_OP
+    ;
 
 translation_unit : 
     stmts { programBlock = $1; }
@@ -51,7 +73,7 @@ expr :
     ;
 
 var_decl :
-    INT ident ';' { $$ = new AstVariableDeclaration($2); }
+    TYPE_INT ident ';' { $$ = new AstVariableDeclaration($2); }
 
 ident : 
     IDENTIFIER { $$ = new AstIdentifier(*$1); delete $1; }

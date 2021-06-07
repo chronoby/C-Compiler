@@ -2,6 +2,7 @@
 #define VISITOR_H_
 
 #include <map>
+#include <stack>
 #include "llvm/IR/Module.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
@@ -21,6 +22,9 @@ public:
     virtual llvm::Value* codegen(const AstExprStmt& node);
     virtual llvm::Value* codegen(AstVariableDeclaration& node);
     virtual llvm::Value* codegen(const AstBlock& node);
+
+    virtual llvm::Value* codegen(const AstPrimaryExpr& node);
+    virtual llvm::Value* codegen(const AstProfixExpr& node);
 
 protected:
     std::unique_ptr<llvm::LLVMContext> context;

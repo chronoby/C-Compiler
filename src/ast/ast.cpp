@@ -1,6 +1,20 @@
 #include "ast.h"
 #include "../visitor/visitor.h"
 
+// --------------------------- expression -------------------------
+
+llvm::Value* AstPrimaryExpr::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstProfixExpr::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+// ----------------------------------------------------------------
+
 llvm::Value* AstInt::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
