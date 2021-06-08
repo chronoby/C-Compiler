@@ -24,7 +24,7 @@ public:
     virtual llvm::Value* codegen(const AstBlock& node);
 
     virtual llvm::Value* codegen(const AstPrimaryExpr& node);
-    virtual llvm::Value* codegen(const AstProfixExpr& node);
+    virtual llvm::Value* codegen(const AstPostfixExpr& node);
     virtual llvm::Value* codegen(const AstExpr& node);
 
 protected:

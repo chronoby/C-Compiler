@@ -16,8 +16,8 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 
 2021-06-08 wyq:
 * 修复了一些primary expression的Bug，调整后可以编译
-* profix expression的ast待处理
-* primary exression的字符串待处理
+* 完成了primary expression
+* 尝试增加postfix expression,AST还没有完成
 * 为了测试把codegenProgram的顶层模块改成primary expression了
 
 // 读变量要用create load

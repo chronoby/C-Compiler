@@ -57,6 +57,8 @@ void Visitor::configureTarget()
     module->setTargetTriple(target);
 }
 
+// --------------------- EXPRESSION -----------------------------
+
 llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
 {
     // TO BE FINISHED
@@ -117,9 +119,9 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
 
             // std::cout << str_content << std::endl;
 
-            llvm::Value* str_mem = this->builder->CreateGlobalString(str_content, "", 0, &*this->module);
+            llvm::Value* str_mem = this->builder->CreateGlobalStringPtr(str_content, "", 0, &*this->module);
             // llvm::Value* str_load = this->builder->CreateLoad(str_mem);
-            
+            // std::cout << str_mem << std::endl;
             return str_mem;
             break;
         }
@@ -156,9 +158,17 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
     }
 }
 
-llvm::Value* Visitor::codegen(const AstProfixExpr& node)
+llvm::Value* Visitor::codegen(const AstPostfixExpr& node)
 {
-    // TO BE FINISHED
+    switch (node.expr_type)
+    {
+        case AstPostfixExpr::ExprType::PRIMARY:
+        {
+            return node.primary_expr->codegen(*this);
+        }
+        
+    }
+
     return nullptr;
 }
 
@@ -167,6 +177,8 @@ llvm::Value* Visitor::codegen(const AstExpr& node)
     // TO BE FINISHED
     return nullptr;
 }
+
+// ------------------------------------------------------------------------------
 
 llvm::Value* Visitor::codegen(const AstInt& node)
 {

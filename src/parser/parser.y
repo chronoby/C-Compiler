@@ -12,6 +12,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %union {
     int type_int;
     AstPrimaryExpr* primary_expr;
+    AstPostfixExpr* postfix_expr;
 
     AstInt* type_int_node;
     AstBlock* block;
@@ -22,6 +23,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 }
 
 %type <primary_expr> primary_expr
+%type <postfix_expr> postfix_expr
 
 %type <ident> ident
 %type <expr> expr 
@@ -45,12 +47,11 @@ primary_expr :
     | FLOAT { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::FLOAT, *$1); }
     | CHAR { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::CHAR, *$1); }
     | STRING { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::STRING, *$1); }
-    /*| '('expression')'*/  /* NOTE: different from present expr */
+    /*| '('expression')'  { $$ = new AstPrimaryExpr($2); }*/  /* NOTE: different from present expr */
     ;
 
-/*
-profix_expr :
-    primary_expr
+postfix_expr :
+    primary_expr { $$ = new AstPostfixExpr($1); }
     | postfix_expr '[' expression ']'
     | postfix_expr '(' ')'
     | postfix_expr '(' argument_expr_list ')'
@@ -60,7 +61,10 @@ profix_expr :
     | postfix_expr DEC_OP
     ;
 
-*/
+argument_expression_list
+	: assignment_expression
+	| argument_expression_list ',' assignment_expression
+	;
 
 translation_unit : 
     primary_expr { primary = $1; }

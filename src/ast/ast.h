@@ -25,6 +25,11 @@ public:
     virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
+class AstArgumentExprList : public AstExpression
+{
+
+};
+
 // Type for primary_expr
 class AstPrimaryExpr : public AstExpression
 {
@@ -56,14 +61,18 @@ public:
 };
 
 // NOTE: TO BE FINISHED
-class AstProfixExpr : public AstExpression
+class AstPostfixExpr : public AstExpression
 {
 public:
     // which grammar rule is used to derive this node
     enum class ExprType {PRIMARY, IDX, FUNC, FUNC_PARAM, MEMBER, PTR_MEMBER, OP};
     
     // in term of a++ or a--
-    enum class OP {INC, DEC};
+    enum class OpType {INC, DEC};
+    
+    // TO BE FINISED
+    AstPostfixExpr(AstPrimaryExpr* primary_expr): primary_expr(primary_expr), expr_type(AstPrif) {};
+    AstPostfixExpr()
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
 // private:
@@ -73,8 +82,11 @@ public:
     // TO BE FINISHED
     AstPrimaryExpr* primary_expr;
 
-    AstProfixExpr* profix_expr;
-    
+    AstPostfixExpr* profix_expr;
+    AstArgumentExprList* argument_expr_list;
+    AstExpr* expr;
+    OpType op_type;
+
     std::string identifier_name;
 };
 
