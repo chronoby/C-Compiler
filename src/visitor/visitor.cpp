@@ -105,8 +105,22 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
         }
         case AstPrimaryExpr::DataType::STRING:
         {
+            std::string str_content = node.value.substr(1, node.value.length() - 2);
+            int content_len = str_content.length();
+            if (content_len > 255) {
+                std::cerr << "WARNING: CUT string literal to length of 255" << std::endl;
+                str_content = str_content.substr(0, 255);
+                content_len = str_content.size();
+            }
+            // char zero = 0;
+            // for (int i = 0; i < 255 - content_len; i++) str_content = str_content + zero;
+
+            // std::cout << str_content << std::endl;
+
+            llvm::Value* str_mem = this->builder->CreateGlobalString(str_content, "", 0, &*this->module);
+            // llvm::Value* str_load = this->builder->CreateLoad(str_mem);
             
-            return nullptr;
+            return str_mem;
             break;
         }
         default:
@@ -122,7 +136,7 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
         auto local_pair = this->locals.find(node.identifier_name);
         if (local_pair != this->locals.end())
         {
-            return new llvm::LoadInst(local_pair->second->getType(), local_pair->second, node.identifier_name, false, block);
+            return this->builder->CreateLoad(local_pair->second);
         }
         else
         {

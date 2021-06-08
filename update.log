@@ -19,3 +19,5 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 * profix expression的ast待处理
 * primary exression的字符串待处理
 * 为了测试把codegenProgram的顶层模块改成primary expression了
+
+// 读变量要用create load
