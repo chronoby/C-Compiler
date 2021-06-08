@@ -105,7 +105,7 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
         }
         case AstPrimaryExpr::DataType::STRING:
         {
-            // TODO: DEAL WITH STRING
+            
             return nullptr;
             break;
         }
@@ -122,7 +122,7 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
         auto local_pair = this->locals.find(node.identifier_name);
         if (local_pair != this->locals.end())
         {
-            return local_pair->second;
+            return new llvm::LoadInst(local_pair->second->getType(), local_pair->second, node.identifier_name, false, block);
         }
         else
         {
