@@ -21,3 +21,6 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 * 为了测试把codegenProgram的顶层模块改成primary expression了
 
 // 读变量要用create load
+
+2021-06-08 wby:
+* primary expr need 

@@ -10,6 +10,7 @@ extern "C" int yywrap() { }
 WS          [ \t\r]
 NEWLINE     [\n]
 TYPE_INT    "int"
+SIZEOF      "sizeof"
 IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
 
 ASSIGN      "="
@@ -38,6 +39,7 @@ STRING      \"(\\.|[^\\"])*\"
 {WS}                        ;
 {NEWLINE}                   ;
 {TYPE_INT}			        return TYPE_INT;
+{SIZEOF}                    return SIZEOF;
 
 {IDENTIFIER}                SAVE_TOKEN; return IDENTIFIER;
 

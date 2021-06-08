@@ -25,7 +25,9 @@ public:
 
     virtual llvm::Value* codegen(const AstPrimaryExpr& node);
     virtual llvm::Value* codegen(const AstPostfixExpr& node);
+    virtual llvm::Value* codegen(const AstUnaryExpr& node);
     virtual llvm::Value* codegen(const AstExpr& node);
+
 
 protected:
     std::unique_ptr<llvm::LLVMContext> context;

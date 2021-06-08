@@ -13,6 +13,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     int type_int;
     AstPrimaryExpr* primary_expr;
     AstPostfixExpr* postfix_expr;
+    AstUnaryExpr* unary_expr;
 
     AstInt* type_int_node;
     AstBlock* block;
@@ -24,6 +25,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 
 %type <primary_expr> primary_expr
 %type <postfix_expr> postfix_expr
+%type <unary_expr> unary_expr
 
 %type <ident> ident
 %type <expr> expr 
@@ -34,6 +36,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token TYPE_INT
 %token PTR_OP INC_OP DEC_OP
+%token SIZEOF
 
 %start translation_unit
 
@@ -52,24 +55,34 @@ primary_expr :
 
 postfix_expr :
     primary_expr { $$ = new AstPostfixExpr($1); }
-    | postfix_expr '[' expression ']'
-    | postfix_expr '(' ')'
+    | postfix_expr '[' INTEGER ']' { $$ = new AstPostfixExpr($1, $3); } /* NOTE: index set as int now */
+    /* | postfix_expr '[' expression ']' */ 
+    /* | postfix_expr '(' ')' todo
     | postfix_expr '(' argument_expr_list ')'
     | postfix_expr '.' IDENTIFIER
-    | postfix_expr PTR_OP IDENTIFIER
-    | postfix_expr INC_OP
-    | postfix_expr DEC_OP
+    | postfix_expr PTR_OP IDENTIFIER */
+    | postfix_expr INC_OP { $$ = new AstPostfixExpr($1, AstPostfixExpr::OpType::INC); }
+    | postfix_expr DEC_OP { $$ = new AstPostfixExpr($1, AstPostfixExpr::OpType::DEC); }
     ;
 
-argument_expression_list
-	: assignment_expression
+/* argument_expression_list : 
+    assignment_expression
 	| argument_expression_list ',' assignment_expression
-	;
+	; */
+
+unary_expr : 
+    postfix_expr { $$ = new AstUnaryExpr($1); }
+	| INC_OP unary_expr
+	| DEC_OP unary_expr
+	/* | unary_operator cast_expr */
+	| SIZEOF unary_expr
+	/* | SIZEOF '(' type_name ')' */
 
 translation_unit : 
+    /* stmts { programBlock = $1; } */
     primary_expr { primary = $1; }
     ;
-        
+
 stmts : 
     stmt { $$ = new AstBlock(); $$->pushStmt($<stmt>1); }
     | stmts stmt { $1->pushStmt($<stmt>2); }

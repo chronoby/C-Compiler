@@ -8,7 +8,12 @@ llvm::Value* AstPrimaryExpr::codegen(Visitor& visitor)
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstProfixExpr::codegen(Visitor& visitor)
+llvm::Value* AstPostfixExpr::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstUnaryExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }

@@ -71,8 +71,10 @@ public:
     enum class OpType {INC, DEC};
     
     // TO BE FINISED
-    AstPostfixExpr(AstPrimaryExpr* primary_expr): primary_expr(primary_expr), expr_type(AstPrif) {};
-    AstPostfixExpr()
+    AstPostfixExpr(AstPrimaryExpr* primary_expr): primary_expr(primary_expr), expr_type(ExprType::PRIMARY) {};
+    AstPostfixExpr(AstPostfixExpr* pf_expr, std::string ind): postfix_expr(pf_expr), identifier_name(pf_expr->identifier_name), 
+        index(ind), expr_type(ExprType::IDX) { }
+    AstPostfixExpr(AstPostfixExpr* pf_expr, OpType op): postfix_expr(pf_expr), op_type(op), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
 // private:
@@ -82,12 +84,30 @@ public:
     // TO BE FINISHED
     AstPrimaryExpr* primary_expr;
 
-    AstPostfixExpr* profix_expr;
+    AstPostfixExpr* postfix_expr;
     AstArgumentExprList* argument_expr_list;
     AstExpr* expr;
     OpType op_type;
 
     std::string identifier_name;
+    std::string index;
+};
+
+class AstUnaryExpr : public AstExpression
+{
+public:
+    enum class ExprType {POSTFIX, OP, CAST, SIZEOF_TYPE, SIZEOF_EXPR};
+    enum class OpType {INC, DEC};
+
+    AstUnaryExpr(AstPostfixExpr* pf_expr): postfix_expr(pf_expr), expr_type(ExprType::POSTFIX) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+
+// private:
+    AstPostfixExpr* postfix_expr;
+    AstUnaryExpr* unary_expr;
+    ExprType expr_type;
+    OpType op_type;
 };
 
 // ----------------------------------------------------------------

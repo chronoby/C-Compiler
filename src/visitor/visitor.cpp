@@ -62,6 +62,7 @@ void Visitor::configureTarget()
 llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
 {
     // TO BE FINISHED
+    std::cout << "Creating primary expr" << node.value << std::endl;
     switch (node.expr_type)
     {
     case AstPrimaryExpr::ExprType::CONSTANT:
@@ -166,11 +167,32 @@ llvm::Value* Visitor::codegen(const AstPostfixExpr& node)
         {
             return node.primary_expr->codegen(*this);
         }
+        // case AstPostfixExpr::ExprType::IDX:
+        // {
+        // }
+        // case AstPostfixExpr::ExprType::OP:
+        // {
+        //     return node.primary_expr->codegen(*this);
+        // }
         
     }
 
     return nullptr;
 }
+
+llvm::Value* Visitor::codegen(const AstUnaryExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstUnaryExpr::ExprType::POSTFIX:
+        {
+            return node.postfix_expr->codegen(*this);
+        }
+    }
+
+    return nullptr;
+}
+
 
 llvm::Value* Visitor::codegen(const AstExpr& node)
 {

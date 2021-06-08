@@ -8,3 +8,7 @@ A Tiny C compiler(demo).
 make
 ./compiler
 ```
+
+## Commit
+
+- Commit to master branch only if the program can build and run.
