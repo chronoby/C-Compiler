@@ -35,7 +35,7 @@ Visitor::Visitor()
     block = llvm::BasicBlock::Create(*context, "entry", mainFunction, 0);
 }
 
-void Visitor::codegenProgram(AstPrimaryExpr* root)
+void Visitor::codegenProgram(AstExpr* root)
 {
     root->codegen(*this);
 
@@ -176,7 +176,6 @@ llvm::Value* Visitor::codegen(const AstPostfixExpr& node)
         // }
         
     }
-
     return nullptr;
 }
 
@@ -189,14 +188,174 @@ llvm::Value* Visitor::codegen(const AstUnaryExpr& node)
             return node.postfix_expr->codegen(*this);
         }
     }
-
     return nullptr;
 }
 
+llvm::Value* Visitor::codegen(const AstCastExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstCastExpr::ExprType::UNARY:
+        {
+            return node.unary_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstMultiplicativeExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstMultiplicativeExpr::ExprType::CAST:
+        {
+            return node.cast_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstAdditiveExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstAdditiveExpr::ExprType::MULTI:
+        {
+            return node.multi_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstShiftExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstShiftExpr::ExprType::ADD:
+        {
+            return node.add_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstRelationalExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstRelationalExpr::ExprType::SHIFT:
+        {
+            return node.shift_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstEqualityExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstEqualityExpr::ExprType::RELATIONAL:
+        {
+            return node.rela_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstAndExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstAndExpr::ExprType::EQUALITY:
+        {
+            return node.equal_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstExclusiveExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstExclusiveExpr::ExprType::AND:
+        {
+            return node.and_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstInclusiveExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstInclusiveExpr::ExprType::EXCLUSIVE:
+        {
+            return node.exclusive_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstLogicalAndExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstLogicalAndExpr::ExprType::INCLUSIVE:
+        {
+            return node.inclusive_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstLogicalOrExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstLogicalOrExpr::ExprType::LOG_AND:
+        {
+            return node.and_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstConditionalExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstConditionalExpr::ExprType::LOG_OR:
+        {
+            return node.or_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstAssignmentExpr& node)
+{
+    switch (node.expr_type)
+    {
+        case AstAssignmentExpr::ExprType::CONDITIONAL:
+        {
+            return node.cond_expr->codegen(*this);
+        }
+    }
+    return nullptr;
+}
 
 llvm::Value* Visitor::codegen(const AstExpr& node)
 {
-    // TO BE FINISHED
+    switch (node.expr_type)
+    {
+        case AstExpr::ExprType::ASSIGN:
+        {
+            return node.assign_expr->codegen(*this);
+        }
+    }
     return nullptr;
 }
 

@@ -1,8 +1,9 @@
 %{
 #include <iostream>
 #include "../ast/ast.h"
-AstBlock *programBlock;
-AstPrimaryExpr *primary;
+AstBlock* programBlock;
+AstPrimaryExpr* primary;
+AstExpr* expre;
 
 extern int yylex();
 void yyerror(const char *s) { printf("ERROR: %s\n", s); }
@@ -14,10 +15,24 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstPrimaryExpr* primary_expr;
     AstPostfixExpr* postfix_expr;
     AstUnaryExpr* unary_expr;
+    AstCastExpr* cast_expr;
+    AstMultiplicativeExpr* multi_expr;
+    AstAdditiveExpr* add_expr;
+    AstShiftExpr* shift_expr;
+    AstRelationalExpr* rela_expr;
+    AstEqualityExpr* equal_expr;
+    AstAndExpr* and_expr;
+    AstExclusiveExpr* exclusive_expr;
+    AstInclusiveExpr* inclusive_expr;
+    AstLogicalAndExpr* log_and_expr;
+    AstLogicalOrExpr* log_or_expr;
+    AstConditionalExpr* cond_expr;
+    AstAssignmentExpr* assign_expr;
+    AstExpr* expr;
 
     AstInt* type_int_node;
     AstBlock* block;
-    AstExpression* expr;
+    // AstExpression* expr;
     AstStatement* stmt;
     AstIdentifier* ident;
     std::string* string;
@@ -26,6 +41,19 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type <primary_expr> primary_expr
 %type <postfix_expr> postfix_expr
 %type <unary_expr> unary_expr
+%type <cast_expr> cast_expr
+%type <multi_expr> multiplicative_expr
+%type <add_expr> additive_expr
+%type <shift_expr> shift_expr
+%type <rela_expr> relational_expr
+%type <equal_expr> equality_expr
+%type <and_expr> and_expr
+%type <exclusive_expr> exclusive_or_expr
+%type <inclusive_expr> inclusive_or_expr
+%type <log_and_expr> logical_and_expr
+%type <log_or_expr> logical_or_expr
+%type <cond_expr> conditional_expr
+%type <assign_expr> assignment_expr
 
 %type <ident> ident
 %type <expr> expr 
@@ -55,7 +83,7 @@ primary_expr :
 
 postfix_expr :
     primary_expr { $$ = new AstPostfixExpr($1); }
-    | postfix_expr '[' INTEGER ']' { $$ = new AstPostfixExpr($1, $3); } /* NOTE: index set as int now */
+    | postfix_expr '[' INTEGER ']' { $$ = new AstPostfixExpr($1, *$3); } /* NOTE: index set as int now */
     /* | postfix_expr '[' expression ']' */ 
     /* | postfix_expr '(' ')' todo
     | postfix_expr '(' argument_expr_list ')'
@@ -77,10 +105,89 @@ unary_expr :
 	/* | unary_operator cast_expr */
 	| SIZEOF unary_expr
 	/* | SIZEOF '(' type_name ')' */
+    ;
+
+cast_expr : 
+    unary_expr { $$ = new AstCastExpr($1); }
+	/* | '(' type_name ')' cast_expression */
+    ;
+
+multiplicative_expr : 
+    cast_expr { $$ = new AstMultiplicativeExpr($1); }
+	| multiplicative_expr '*' cast_expr
+	| multiplicative_expr '/' cast_expr
+	| multiplicative_expr '%' cast_expr
+    ;
+
+additive_expr : 
+multiplicative_expr { $$ = new AstAdditiveExpr($1); }
+	| additive_expr '+' multiplicative_expr
+	| additive_expr '-' multiplicative_expr
+    ;
+
+shift_expr : 
+additive_expr { $$ = new AstShiftExpr($1); }
+	/* | shift_expr LEFT_OP additive_expr
+	| shift_expr RIGHT_OP additive_expr */
+    ;
+
+relational_expr : 
+    shift_expr { $$ = new AstRelationalExpr($1); }
+	| relational_expr '<' shift_expr
+	| relational_expr '>' shift_expr
+	/* | relational_expr LE_OP shift_expr
+	| relational_expr GE_OP shift_expr */
+    ;
+
+equality_expr : 
+    relational_expr { $$ = new AstEqualityExpr($1); }
+	/* | equality_expr EQ_OP relational_expr
+	| equality_expr NE_OP relational_expr */
+    ;
+
+and_expr : 
+    equality_expr { $$ = new AstAndExpr($1); }
+	| and_expr '&' equality_expr
+	;
+
+exclusive_or_expr : 
+    and_expr { $$ = new AstExclusiveExpr($1); }
+	| exclusive_or_expr '^' and_expr
+	;
+
+inclusive_or_expr : 
+    exclusive_or_expr { $$ = new AstInclusiveExpr($1); }
+	| inclusive_or_expr '|' exclusive_or_expr
+	;
+
+logical_and_expr : 
+    inclusive_or_expr { $$ = new AstLogicalAndExpr($1); }
+	/* | logical_and_expr AND_OP inclusive_or_expr */
+	;
+
+logical_or_expr : 
+    logical_and_expr { $$ = new AstLogicalOrExpr($1); }
+	/* | logical_or_expr OR_OP logical_and_expr */
+	;
+
+conditional_expr : 
+    logical_or_expr { $$ = new AstConditionalExpr($1); }
+	| logical_or_expr '?' expr ':' conditional_expr
+	;
+
+assignment_expr : 
+    conditional_expr { $$ = new AstAssignmentExpr($1); }
+	/* | unary_expr assignment_operator assignment_expr */
+    ;
+
+expr : 
+    assignment_expr { $$ = new AstExpr($1); }
+	| expr ',' assignment_expr
+    ;
 
 translation_unit : 
     /* stmts { programBlock = $1; } */
-    primary_expr { primary = $1; }
+    expr { expre = $1; }
     ;
 
 stmts : 
@@ -91,11 +198,6 @@ stmts :
 stmt : 
     expr ';' { $$ = new AstExprStmt($1); }
     | var_decl
-    ;
-
-expr : 
-    ident '=' expr { $$ = new AstAssignment($<ident>1, $3); }
-    | numeric '+' numeric { $$ = new AstInt($1->getInt() + $3->getInt()); }
     ;
 
 var_decl :

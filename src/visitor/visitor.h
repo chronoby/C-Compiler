@@ -13,7 +13,7 @@ class Visitor
 {
 public:
     Visitor();
-    void codegenProgram(AstPrimaryExpr* root);
+    void codegenProgram(AstExpr* root);
     void configureTarget();
 
     virtual llvm::Value* codegen(const AstInt& node);
@@ -26,6 +26,19 @@ public:
     virtual llvm::Value* codegen(const AstPrimaryExpr& node);
     virtual llvm::Value* codegen(const AstPostfixExpr& node);
     virtual llvm::Value* codegen(const AstUnaryExpr& node);
+    virtual llvm::Value* codegen(const AstCastExpr& node);
+    virtual llvm::Value* codegen(const AstMultiplicativeExpr& node);
+    virtual llvm::Value* codegen(const AstAdditiveExpr& node);
+    virtual llvm::Value* codegen(const AstShiftExpr& node);
+    virtual llvm::Value* codegen(const AstRelationalExpr& node);
+    virtual llvm::Value* codegen(const AstEqualityExpr& node);
+    virtual llvm::Value* codegen(const AstAndExpr& node);
+    virtual llvm::Value* codegen(const AstExclusiveExpr& node);
+    virtual llvm::Value* codegen(const AstInclusiveExpr& node);
+    virtual llvm::Value* codegen(const AstLogicalAndExpr& node);
+    virtual llvm::Value* codegen(const AstLogicalOrExpr& node);
+    virtual llvm::Value* codegen(const AstConditionalExpr& node);
+    virtual llvm::Value* codegen(const AstAssignmentExpr& node);
     virtual llvm::Value* codegen(const AstExpr& node);
 
 

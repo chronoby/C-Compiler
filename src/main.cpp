@@ -5,6 +5,7 @@ extern int yyparse();
 extern "C" FILE *yyin;
 extern AstBlock* programBlock;
 extern AstPrimaryExpr* primary;
+extern AstExpr* expre;
 
 int main(int argc, char **argv)
 {
@@ -22,7 +23,7 @@ int main(int argc, char **argv)
 
     Visitor codeGenerator;
     std::cout << "Begin generating code" << std::endl;
-    codeGenerator.codegenProgram(primary);
+    codeGenerator.codegenProgram(expre);
     // codeGenerator.configureTarget();
     
     return 0;

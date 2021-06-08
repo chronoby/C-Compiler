@@ -7,6 +7,7 @@
 #include <llvm/IR/Value.h>
 
 class Visitor;
+class AstExpr;
 
 class AstNode
 {
@@ -18,12 +19,6 @@ class AstExpression : public AstNode { };
 class AstStatement : public AstNode { };
 
 // --------------------------- expression -------------------------
-
-class AstExpr : public AstExpression
-{
-public:
-    virtual llvm::Value* codegen(Visitor& visitor) override;
-};
 
 class AstArgumentExprList : public AstExpression
 {
@@ -72,9 +67,9 @@ public:
     
     // TO BE FINISED
     AstPostfixExpr(AstPrimaryExpr* primary_expr): primary_expr(primary_expr), expr_type(ExprType::PRIMARY) {};
-    AstPostfixExpr(AstPostfixExpr* pf_expr, std::string ind): postfix_expr(pf_expr), identifier_name(pf_expr->identifier_name), 
+    AstPostfixExpr(AstPostfixExpr* expr, std::string ind): postfix_expr(expr), identifier_name(expr->identifier_name), 
         index(ind), expr_type(ExprType::IDX) { }
-    AstPostfixExpr(AstPostfixExpr* pf_expr, OpType op): postfix_expr(pf_expr), op_type(op), expr_type(ExprType::OP) { }
+    AstPostfixExpr(AstPostfixExpr* expr, OpType op): postfix_expr(expr), op_type(op), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
 // private:
@@ -99,7 +94,7 @@ public:
     enum class ExprType {POSTFIX, OP, CAST, SIZEOF_TYPE, SIZEOF_EXPR};
     enum class OpType {INC, DEC};
 
-    AstUnaryExpr(AstPostfixExpr* pf_expr): postfix_expr(pf_expr), expr_type(ExprType::POSTFIX) { }
+    AstUnaryExpr(AstPostfixExpr* expr): postfix_expr(expr), expr_type(ExprType::POSTFIX) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
 
@@ -108,6 +103,192 @@ public:
     AstUnaryExpr* unary_expr;
     ExprType expr_type;
     OpType op_type;
+};
+
+class AstCastExpr: public AstExpression
+{
+public:
+    enum class ExprType {UNARY, CAST};
+
+    AstCastExpr(AstUnaryExpr* expr): unary_expr(expr), expr_type(ExprType::UNARY) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstUnaryExpr* unary_expr;
+    AstCastExpr* cast_expr;
+};
+
+class AstMultiplicativeExpr: public AstExpression
+{
+public:
+    enum class ExprType {CAST, OP};
+    enum class OpType {MUL, DIV, MOD};
+
+    AstMultiplicativeExpr(AstCastExpr* expr): cast_expr(expr), expr_type(ExprType::CAST) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstCastExpr* cast_expr;
+};
+
+class AstAdditiveExpr: public AstExpression
+{
+public:
+    enum class ExprType {MULTI, OP};
+    enum class OpType {PLUS, MINUS};
+
+    AstAdditiveExpr(AstMultiplicativeExpr* expr): multi_expr(expr), expr_type(ExprType::MULTI) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstMultiplicativeExpr* multi_expr;
+};
+
+class AstShiftExpr: public AstExpression
+{
+public:
+    enum class ExprType {ADD, OP};
+    enum class OpType {LEFT, RIGHT};
+
+    AstShiftExpr(AstAdditiveExpr* expr): add_expr(expr), expr_type(ExprType::ADD) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstAdditiveExpr* add_expr;
+};
+
+class AstRelationalExpr: public AstExpression
+{
+public:
+    enum class ExprType {SHIFT, OP};
+    enum class OpType {LESS, GREATER, LE, GE};
+
+    AstRelationalExpr(AstShiftExpr* expr): shift_expr(expr), expr_type(ExprType::SHIFT) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstShiftExpr* shift_expr;
+};
+
+class AstEqualityExpr: public AstExpression
+{
+public:
+    enum class ExprType {RELATIONAL, OP};
+    enum class OpType {EQ, NE};
+
+    AstEqualityExpr(AstRelationalExpr* expr): rela_expr(expr), expr_type(ExprType::RELATIONAL) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstRelationalExpr* rela_expr;
+};
+
+class AstAndExpr: public AstExpression
+{
+public:
+    enum class ExprType {EQUALITY, OP};
+
+    AstAndExpr(AstEqualityExpr* expr): equal_expr(expr), expr_type(ExprType::EQUALITY) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstEqualityExpr* equal_expr;
+};
+
+class AstExclusiveExpr: public AstExpression
+{
+public:
+    enum class ExprType {AND, OP};
+
+    AstExclusiveExpr(AstAndExpr* expr): and_expr(expr), expr_type(ExprType::AND) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstAndExpr* and_expr;
+};
+
+class AstInclusiveExpr: public AstExpression
+{
+public:
+    enum class ExprType {EXCLUSIVE, OP};
+    AstInclusiveExpr(AstExclusiveExpr* expr): exclusive_expr(expr), expr_type(ExprType::EXCLUSIVE) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstExclusiveExpr* exclusive_expr;
+};
+
+class AstLogicalAndExpr: public AstExpression
+{
+public:
+    enum class ExprType {INCLUSIVE, OP};
+    AstLogicalAndExpr(AstInclusiveExpr* expr): inclusive_expr(expr), expr_type(ExprType::INCLUSIVE) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstInclusiveExpr* inclusive_expr;
+};
+
+class AstLogicalOrExpr: public AstExpression
+{
+public:
+    enum class ExprType {LOG_AND, OP};
+
+    AstLogicalOrExpr(AstLogicalAndExpr* expr): and_expr(expr), expr_type(ExprType::LOG_AND) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstLogicalAndExpr* and_expr;
+};
+
+class AstConditionalExpr: public AstExpression
+{
+public:
+    enum class ExprType {LOG_OR, OP};
+
+    AstConditionalExpr(AstLogicalOrExpr* expr): or_expr(expr), expr_type(ExprType::LOG_OR) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstLogicalOrExpr* or_expr;
+};
+
+class AstAssignmentExpr: public AstExpression
+{
+public:
+    enum class ExprType {CONDITIONAL, OP};
+
+    AstAssignmentExpr(AstConditionalExpr* expr): cond_expr(expr), expr_type(ExprType::CONDITIONAL) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstConditionalExpr* cond_expr;
+};
+
+class AstExpr: public AstExpression
+{
+public:
+    enum class ExprType {ASSIGN, OP};
+
+    AstExpr(AstAssignmentExpr* expr): assign_expr(expr), expr_type(ExprType::ASSIGN) { }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+    
+    ExprType expr_type;
+    AstAssignmentExpr* assign_expr;
 };
 
 // ----------------------------------------------------------------

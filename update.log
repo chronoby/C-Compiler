@@ -22,5 +22,9 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 
 // 读变量要用create load
 
+-------
+
 2021-06-08 wby:
-* primary expr need 
+* 完成了 primary_expr 到 expr 的所有第一项规约(没有具体实现，仅包含各个节点的构造和父节点对子节点 codegen 的调用)
+* codegenProgram 的顶层模块目前为 expr，parser 从 translation_unit 开始，直接规约至 expr，然后一层一层向下直到最底层
+* 后续工作可以暂时分成两个比较独立的部分：1. expr 部分的完善; 2. 接着从 expr 向上做
