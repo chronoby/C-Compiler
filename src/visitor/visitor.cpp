@@ -35,9 +35,8 @@ Visitor::Visitor()
     block = llvm::BasicBlock::Create(*context, "entry", mainFunction, 0);
 }
 
-void Visitor::codegenProgram(AstBlock* root)
+void Visitor::codegenProgram(AstPrimaryExpr* root)
 {
-    
     root->codegen(*this);
 
     std::cout << "Generate code completed" << std::endl << "LLVM IR:" << std::endl;
@@ -64,29 +63,35 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
     switch (node.expr_type)
     {
     case AstPrimaryExpr::ExprType::CONSTANT:
+    {
         switch (node.data_type)
         {
         case AstPrimaryExpr::DataType::INTEGER:
-            int val = strtol(node.value);
+        {
+            int val = strtol(node.value.c_str(), nullptr, 10);
             return llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
             break;
-
+        }
         case AstPrimaryExpr::DataType::OCTAL:
-            int val = strtol(node.value);
+        {
+            int val = strtol(node.value.c_str(), nullptr, 8);
             return llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
             break;
-
+        }
         case AstPrimaryExpr::DataType::HEXI:
-            int val = strtol(node.value);
+        {
+            int val = strtol(node.value.c_str(), nullptr, 16);
             return llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
             break;
-
+        }
         case AstPrimaryExpr::DataType::FLOAT:
-            double val = strtod(node.value);
-            return llvm::ContantFP::get(llvm::Type::getDoubleTy(*context), val)
+        {
+            double val = strtod(node.value.c_str(), nullptr);
+            return llvm::ConstantFP::get(llvm::Type::getDoubleTy(*context), val);
             break;
-
+        }
         case AstPrimaryExpr::DataType::CHAR:
+        {
             if (node.value.length() == 0)
             {
                 return llvm::ConstantInt::get(llvm::Type::getInt8Ty(*context), 0, true);
@@ -97,18 +102,22 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
                 return llvm::ConstantInt::get(llvm::Type::getInt8Ty(*context), val, true);
             }
             break;
-        
+        }
         case AstPrimaryExpr::DataType::STRING:
+        {
             // TODO: DEAL WITH STRING
             return nullptr;
             break;
-        
+        }
         default:
+        {
             std::cerr << "ERROR: Invalid Datatype" << std::endl;
             return nullptr;
         }
-    
+        }
+    }
     case AstPrimaryExpr::ExprType::ID:
+    {
         // NOTE: to be updated when the variable mapping mechanism updates
         auto local_pair = this->locals.find(node.identifier_name);
         if (local_pair != this->locals.end())
@@ -120,19 +129,29 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
             std::cerr << "ERROR: identifier not defined: " << node.identifier_name << std::endl;
             return nullptr;
         }
-
+    }
     case AstPrimaryExpr::ExprType::PR_EXPR:
-        return node.expr->codegen();
-
+    {
+        return node.expr->codegen(*this);
+    }
     default:
+    {
         std::cerr << "ERROR: INVALID AstPrimaryExpr node" << std::endl;
         return nullptr;
+    }
     }
 }
 
 llvm::Value* Visitor::codegen(const AstProfixExpr& node)
 {
     // TO BE FINISHED
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstExpr& node)
+{
+    // TO BE FINISHED
+    return nullptr;
 }
 
 llvm::Value* Visitor::codegen(const AstInt& node)

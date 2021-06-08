@@ -13,6 +13,11 @@ llvm::Value* AstProfixExpr::codegen(Visitor& visitor)
     return visitor.codegen(*this);
 }
 
+llvm::Value* AstExpr::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
 // ----------------------------------------------------------------
 
 llvm::Value* AstInt::codegen(Visitor& visitor)

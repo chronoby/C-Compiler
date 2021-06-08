@@ -21,8 +21,9 @@ class AstStatement : public AstNode { };
 
 class AstExpr : public AstExpression
 {
-
-}
+public:
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+};
 
 // Type for primary_expr
 class AstPrimaryExpr : public AstExpression
@@ -34,9 +35,9 @@ public:
     // type of data if it is a constant
     enum class DataType {INTEGER, HEXI, OCTAL, FLOAT, CHAR, STRING};
     
-    AstPrimaryExpr(AstPrimaryExpr::DataType dtype, std::string val): value(val), data_type(dtype), expr_type(CONSTANT) {}
-    AstPrimaryExpr(std::string name): identifier_name(name), expr_type(ID) {}
-    AstPrimaryExpr(AstExpr* expr): expr(expr), value(""), expr_type(PR_EXPR) {}
+    AstPrimaryExpr(AstPrimaryExpr::DataType dtype, std::string val): value(val), data_type(dtype), expr_type(AstPrimaryExpr::ExprType::CONSTANT) {}
+    AstPrimaryExpr(std::string name): identifier_name(name), expr_type(AstPrimaryExpr::ExprType::ID) {}
+    AstPrimaryExpr(AstExpr* expr): expr(expr), value(""), expr_type(AstPrimaryExpr::ExprType::PR_EXPR) {}
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
 // private:
@@ -52,8 +53,9 @@ public:
 
     // INDENTIFIER
     std::string identifier_name;
-}
+};
 
+// NOTE: TO BE FINISHED
 class AstProfixExpr : public AstExpression
 {
 public:
@@ -68,12 +70,13 @@ public:
     // which grammar rule is used to derive this node
     ExprType expr_type;
 
+    // TO BE FINISHED
     AstPrimaryExpr* primary_expr;
 
     AstProfixExpr* profix_expr;
     
     std::string identifier_name;
-}
+};
 
 // ----------------------------------------------------------------
 

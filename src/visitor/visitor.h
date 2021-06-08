@@ -13,7 +13,7 @@ class Visitor
 {
 public:
     Visitor();
-    void codegenProgram(AstBlock* root);
+    void codegenProgram(AstPrimaryExpr* root);
     void configureTarget();
 
     virtual llvm::Value* codegen(const AstInt& node);
@@ -25,6 +25,7 @@ public:
 
     virtual llvm::Value* codegen(const AstPrimaryExpr& node);
     virtual llvm::Value* codegen(const AstProfixExpr& node);
+    virtual llvm::Value* codegen(const AstExpr& node);
 
 protected:
     std::unique_ptr<llvm::LLVMContext> context;

@@ -28,7 +28,7 @@ EXP         [Ee][+-]+{DIGIT}+
 INT_S       (u|U|l|L)*
 FLOAT_S     (f|F|l|L)
 INTEGER     [0-9]+{INT_S}?
-HEXI        (0(x|X))({digit}|[A-Fa-f])+{INT_S}?
+HEXI        (0(x|X))({DIGIT}|[A-Fa-f])+{INT_S}?
 OCTAL       (0[0-7]+){INT_S}?
 FLOAT       (({DIGIT}+{EXP})|({DIGIT}*"."{DIGIT}+({EXP})?)|({DIGIT}+"."{DIGIT}*({EXP})?)){FLOAT_S}?
 CHAR        '(\\.|[^\\'])+'

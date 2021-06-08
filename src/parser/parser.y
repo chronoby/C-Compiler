@@ -2,6 +2,7 @@
 #include <iostream>
 #include "../ast/ast.h"
 AstBlock *programBlock;
+AstPrimaryExpr *primary;
 
 extern int yylex();
 void yyerror(const char *s) { printf("ERROR: %s\n", s); }
@@ -10,6 +11,8 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 /* Represents the many different ways we can access our data */
 %union {
     int type_int;
+    AstPrimaryExpr* primary_expr;
+
     AstInt* type_int_node;
     AstBlock* block;
     AstExpression* expr;
@@ -17,6 +20,8 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstIdentifier* ident;
     std::string* string;
 }
+
+%type <primary_expr> primary_expr
 
 %type <ident> ident
 %type <expr> expr 
@@ -26,22 +31,24 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token TYPE_INT
+%token PTR_OP INC_OP DEC_OP
 
 %start translation_unit
 
 %%
 
 primary_expr :
-    IDENTIFIER
-    | INTEGER
-    | HEXI
-    | OCTAL
-    | FLOAT
-    | CHAR
-    | STRING
-    | '('expression')'  /* NOTE: different from present expr */
+    IDENTIFIER { $$ = new AstPrimaryExpr(*$1); }
+    | INTEGER { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::INTEGER, *$1); }
+    | HEXI { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::HEXI, *$1); }
+    | OCTAL { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::OCTAL, *$1); }
+    | FLOAT { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::FLOAT, *$1); }
+    | CHAR { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::CHAR, *$1); }
+    | STRING { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::STRING, *$1); }
+    /*| '('expression')'*/  /* NOTE: different from present expr */
     ;
 
+/*
 profix_expr :
     primary_expr
     | postfix_expr '[' expression ']'
@@ -53,8 +60,10 @@ profix_expr :
     | postfix_expr DEC_OP
     ;
 
+*/
+
 translation_unit : 
-    stmts { programBlock = $1; }
+    primary_expr { primary = $1; }
     ;
         
 stmts : 

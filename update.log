@@ -11,3 +11,11 @@ yacc grammar中，从primary_expression到expression这一部分语法描述了�
 expression部分的codegen关键是计算出expression的llvm::Value，这个过程中也可能包含了一些其他的操作
 我写ast类的时候，想法是用一个枚举类记录这个ast expr node用了哪条语法规则进行推导，然后codegen根据类型
 和成员计算出llvm::Value，成员一般是推导中可能得到的后续项 
+
+-------
+
+2021-06-08 wyq:
+* 修复了一些primary expression的Bug，调整后可以编译
+* profix expression的ast待处理
+* primary exression的字符串待处理
+* 为了测试把codegenProgram的顶层模块改成primary expression了
