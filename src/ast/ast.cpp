@@ -88,6 +88,13 @@ llvm::Value* AstExpr::codegen(Visitor& visitor)
     return visitor.codegen(*this);
 }
 
+// ------------------------Declaration ---------------------------
+
+llvm::Value* AstExternDecl::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
 // ----------------------------------------------------------------
 
 llvm::Value* AstInt::codegen(Visitor& visitor)

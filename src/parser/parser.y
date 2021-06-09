@@ -180,6 +180,59 @@ assignment_expr :
 	/* | unary_expr assignment_operator assignment_expr */
     ;
 
+
+external_decl :
+    decl
+    /* | function_def */
+    ;
+
+decl :
+    decl_specifiers ';'
+    | decl_specifiers init_declarator_list ';'
+    ;
+
+decl_specifiers :
+    : storage_class_specifier
+	| storage_class_specifier declaration_specifiers
+	| type_specifier
+	| type_specifier declaration_specifiers
+	| type_qualifier
+	| type_qualifier declaration_specifiers
+	;
+
+init_declarator_list :
+    init_declarator
+    | init_declarator_list ',' init_declarator
+    ;
+
+init_declarator :
+    declarator
+	| declarator '=' initializer
+    ;
+
+declarator : 
+    pointer direct_declarator
+	| direct_declarator
+    ;
+
+direct_declarator : 
+    IDENTIFIER
+	| '(' declarator ')'
+	| direct_declarator '[' constant_expression ']'
+	| direct_declarator '[' ']'
+	| direct_declarator '(' parameter_type_list ')'
+	| direct_declarator '(' identifier_list ')'
+	| direct_declarator '(' ')'
+	;
+
+initializer :
+    assignment_expression
+	| '{' initializer_list '}'
+	| '{' initializer_list ',' '}'
+	;
+
+/* ------------------------------------------------------------ */    
+
 expr : 
     assignment_expr { $$ = new AstExpr($1); }
 	| expr ',' assignment_expr

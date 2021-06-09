@@ -291,6 +291,58 @@ public:
     AstAssignmentExpr* assign_expr;
 };
 
+// ---------------------- DECLRATION ---------------------------
+
+class AstExternDecl : public AstStatement
+{
+public:
+    enum class DeclType {VAR, FUNC};
+
+    virtual llvm::Value* codegen(Visitor visitor) override;
+
+    AstDecl* declaration;
+    AstFunctionDef* function_definition;
+};
+
+class AstDecl : public AstStatement
+{
+public:
+    AstDeclSpecifiers* decl_specifiers;
+    AstInitDeclaratorList* init_declarator_list;
+};
+
+class AstDeclSpecifiers : public AstStatament
+{
+public:
+};
+
+class AstInitDeclaratorList : public AstStatement
+{
+public:
+
+};
+
+class AstFunctionDef : public AstStatement
+{
+
+};
+
+class AstDeclarator : public AstStatement
+{
+public:
+    enum class DeclaratorType {POINTER, VAR};
+    
+
+};
+
+class AstDirectDeclaratior : public AstStatement
+{
+public:
+
+    std::string 
+};
+
+
 // ----------------------------------------------------------------
 
 class AstInt : public AstExpression

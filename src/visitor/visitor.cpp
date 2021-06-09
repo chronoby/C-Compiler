@@ -33,6 +33,9 @@ Visitor::Visitor()
     llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*context), argTypes, false);
     llvm::Function* mainFunction = llvm::Function::Create(ftype, llvm::Function::InternalLinkage, "main", *module);
     block = llvm::BasicBlock::Create(*context, "entry", mainFunction, 0);
+
+    LocalEnv* global_env = new LocalEnv();
+    envs.push_back(*global_env);
 }
 
 void Visitor::codegenProgram(AstExpr* root)
@@ -357,6 +360,12 @@ llvm::Value* Visitor::codegen(const AstExpr& node)
         }
     }
     return nullptr;
+}
+// ------------------------ Declaration ---------------------------
+
+llvm::Value* Visitor::codegen(const AstExternDecl& node)
+{
+    
 }
 
 // ------------------------------------------------------------------------------
