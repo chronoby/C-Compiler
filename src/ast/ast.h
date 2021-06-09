@@ -51,7 +51,6 @@ public:
     DataType data_type;
     std::string value;
 
-    // INDENTIFIER
     std::string identifier_name;
 };
 
@@ -268,14 +267,18 @@ public:
 class AstAssignmentExpr: public AstExpression
 {
 public:
-    enum class ExprType {CONDITIONAL, OP};
+    enum class ExprType {CONDITIONAL, ASSIGN};
 
     AstAssignmentExpr(AstConditionalExpr* expr): cond_expr(expr), expr_type(ExprType::CONDITIONAL) { }
+    AstAssignmentExpr(AstUnaryExpr* expr, AstAssignmentExpr* a_expr): unary_expr(expr), assign_expr(a_expr),
+        expr_type(ExprType::ASSIGN) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstConditionalExpr* cond_expr;
+    AstUnaryExpr* unary_expr;
+    AstAssignmentExpr* assign_expr;
 };
 
 class AstExpr: public AstExpression

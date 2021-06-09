@@ -337,11 +337,18 @@ llvm::Value* Visitor::codegen(const AstConditionalExpr& node)
 
 llvm::Value* Visitor::codegen(const AstAssignmentExpr& node)
 {
+    std::cout << "assign 2" << std::endl;
     switch (node.expr_type)
     {
         case AstAssignmentExpr::ExprType::CONDITIONAL:
         {
             return node.cond_expr->codegen(*this);
+        }
+        case AstAssignmentExpr::ExprType::ASSIGN:
+        {
+            std::cout << "assign 3" << std::endl;
+            // need update
+            return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
         }
     }
     return nullptr;
@@ -353,6 +360,7 @@ llvm::Value* Visitor::codegen(const AstExpr& node)
     {
         case AstExpr::ExprType::ASSIGN:
         {
+            std::cout << "assign 1" << std::endl;
             return node.assign_expr->codegen(*this);
         }
     }

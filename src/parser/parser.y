@@ -177,6 +177,7 @@ conditional_expr :
 
 assignment_expr : 
     conditional_expr { $$ = new AstAssignmentExpr($1); }
+	| unary_expr '=' assignment_expr { $$ = new AstAssignmentExpr($1, $3); }
 	/* | unary_expr assignment_operator assignment_expr */
     ;
 
