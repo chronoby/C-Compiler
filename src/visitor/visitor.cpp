@@ -33,9 +33,11 @@ Visitor::Visitor()
     llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*context), argTypes, false);
     llvm::Function* mainFunction = llvm::Function::Create(ftype, llvm::Function::InternalLinkage, "main", *module);
     block = llvm::BasicBlock::Create(*context, "entry", mainFunction, 0);
+
+    envs.push_back(new LocalEnv());
 }
 
-void Visitor::codegenProgram(AstExpr* root)
+void Visitor::codegenProgram(AstTranslationUnit* root)
 {
     root->codegen(*this);
 
@@ -136,8 +138,9 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
     case AstPrimaryExpr::ExprType::ID:
     {
         // NOTE: to be updated when the variable mapping mechanism updates
-        auto local_pair = this->locals.find(node.identifier_name);
-        if (local_pair != this->locals.end())
+        auto locals = this->envs.back()->locals;
+        auto local_pair = locals.find(node.identifier_name);
+        if (local_pair != locals.end())
         {
             return this->builder->CreateLoad(local_pair->second);
         }
@@ -367,6 +370,128 @@ llvm::Value* Visitor::codegen(const AstExpr& node)
     return nullptr;
 }
 
+// ---------------- declaration ----------------------------
+
+llvm::Value* Visitor::codegen(const AstExternDecl& node)
+{
+    switch(node.decl_type)
+    {
+        case (AstExternDecl::DeclType::VAR):
+        {
+            return node.declaration->codegen(*this);
+        }
+        case (AstExternDecl::DeclType::FUNC):
+        {
+            // to be updated when function is added
+            return nullptr;
+        }
+    }
+}
+
+llvm::Type* Visitor::codegen(const AstTypeSpecifier& node)
+{
+    switch (node.type)
+    {
+        case (AstTypeSpecifier::Type::INT):
+        {
+            return llvm::Type::getInt32Ty(*context);
+        }
+        case (AstTypeSpecifier::Type::SHORT):
+        {
+            return llvm::Type::getInt16Ty(*context);
+        }
+        case (AstTypeSpecifier::Type::LONG):
+        {
+            return llvm::Type::getInt32Ty(*context);
+        }
+        case (AstTypeSpecifier::Type::DOUBLE):
+        {
+            return llvm::Type::getDoubleTy(*context);
+        }
+        case (AstTypeSpecifier::Type::CHAR):
+        {
+            return llvm::Type::getInt8Ty(*context);            
+        }
+        case (AstTypeSpecifier::Type::FLOAT):
+        {
+            return llvm::Type::getFloatTy(*context);
+        }
+        default:
+        {
+            std::cerr << "ERROR: invalid data type" << std::endl;
+            return nullptr;
+        }
+    }
+}
+
+llvm::Value* Visitor::codegen(const AstDecl& node)
+{
+    if (!node.decl_specifiers || node.decl_specifiers->type_specs.size() != 1)
+    {
+        std::cerr << "ERROR: invalid declaration specifiers" << std::endl;
+        return nullptr;
+    }
+    auto type_spec = node.decl_specifiers->type_specs[0];
+    if (!node.init_declarator_list)
+    {
+        std::cerr << "ERROR: invalid init declarators" << std::endl;
+        return nullptr;
+    }
+    auto init_declarators = node.init_declarator_list->init_declarators;
+    for (auto init_declarator : init_declarators)
+    {
+        auto declarator = init_declarator->declarator;
+        auto initializer = init_declarator->initializer;
+        // if (!initializer)
+        // {
+        //     std::cerr << "ERROR: invalid initializer" << std::endl;
+        //     return nullptr;
+        // }
+        
+        // auto initializer_value = initializer->codegen(*this);
+
+        if (declarator->declarator_type == AstDeclarator::DeclaratorType::VAR)
+        {
+            std::string var_name = declarator->direct_declarator->id_name;
+            auto var_type = type_spec->codegen(*this);
+            auto initializer_zero = llvm::ConstantAggregateZero::get(var_type);
+            if (envs.size() == 1)
+            {
+                LocalEnv present_env = *(envs[0]);
+                llvm::GlobalVariable *var = new llvm::GlobalVariable(
+                    *(this->module),
+                    var_type,
+                    false,
+                    llvm::GlobalValue::CommonLinkage,
+                    initializer_zero,
+                    var_name
+                );
+                
+                present_env.locals.insert({var_name, var});
+            }
+            else
+            {
+                LocalEnv present_env = *(envs.back());
+            }
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstInitializer& node)
+{
+    return node.assignment_expr->codegen(*this);
+}
+
+llvm::Value* Visitor::codegen(const AstTranslationUnit& node)
+{
+    for (auto i : node.external_decl_list)
+    {
+        i->codegen(*this);
+    }
+    return nullptr;
+}
+
 // ------------------------------------------------------------------------------
 
 llvm::Value* Visitor::codegen(const AstInt& node)
@@ -377,6 +502,7 @@ llvm::Value* Visitor::codegen(const AstInt& node)
 
 llvm::Value* Visitor::codegen(const AstIdentifier& node)
 {
+    auto locals = this->envs.back()->locals;
     std::cout << "Creating id" << std::endl;
     std::string name = node.getName();
     if(locals.find(name) == locals.end())
@@ -397,6 +523,7 @@ llvm::Value* Visitor::codegen(const AstAssignment& node)
 {
     std::cout << "Creating assignment" << std::endl;
     std::string name = node.getName();
+    auto locals = this->envs.back()->locals;
     if(locals.find(name) == locals.end())
     {
         std::cout << "Undefined variable: " << name << std::endl;
@@ -408,7 +535,7 @@ llvm::Value* Visitor::codegen(const AstAssignment& node)
 llvm::Value* Visitor::codegen(AstVariableDeclaration& node)
 {
     std::cout << "Creating variable declaration" << std::endl;
-    
+    auto locals = this->envs.back()->locals;
     // llvm::AllocaInst* alloc = new llvm::AllocaInst(llvm::Type::getInt32Ty(*context), llvm::getInt32(1), node.id->name.c_str(), block);
     llvm::AllocaInst* alloc = new llvm::AllocaInst(llvm::Type::getInt32Ty(*context), 0, node.id->name.c_str(), block);
     // llvm::AllocaInst* alloc = builder->CreateAlloca(llvm::Type::getInt32Ty(*context), nullptr, node.id->name.c_str());

@@ -10,6 +10,14 @@ extern "C" int yywrap() { }
 WS          [ \t\r]
 NEWLINE     [\n]
 TYPE_INT    "int"
+TYPE_CHAR   "char"
+TYPE_FLOAT  "float"
+TYPE_DOUBLE "double"
+TYPE_LONG   "long"
+TYPE_SHORT  "short"
+TYPE_SIGNED "signed"
+TYPE_UNSIGNED   "unsigned"
+VOID        "void"
 SIZEOF      "sizeof"
 IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
 
@@ -38,7 +46,15 @@ STRING      \"(\\.|[^\\"])*\"
 %%
 {WS}                        ;
 {NEWLINE}                   ;
-{TYPE_INT}			        return TYPE_INT;
+{VOID}                      SAVE_TOKEN; return VOID;
+{TYPE_INT}			        SAVE_TOKEN; return TYPE_INT;
+{TYPE_LONG}                 SAVE_TOKEN; return TYPE_LONG;
+{TYPE_SHORT}                SAVE_TOKEN; return TYPE_SHORT;
+{TYPE_DOUBLE}               SAVE_TOKEN; return TYPE_DOUBLE;
+{TYPE_FLOAT}                SAVE_TOKEN; return TYPE_FLOAT;
+{TYPE_SIGNED}               SAVE_TOKEN; return TYPE_SIGNED;
+{TYPE_UNSIGNED}             SAVE_TOKEN; return TYPE_UNSIGNED;
+{TYPE_CHAR}                 SAVE_TOKEN; return TYPE_CHAR;
 {SIZEOF}                    return SIZEOF;
 
 {IDENTIFIER}                SAVE_TOKEN; return IDENTIFIER;

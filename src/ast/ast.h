@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <map>
 #include <llvm/IR/Value.h>
 
 class Visitor;
@@ -292,6 +293,174 @@ public:
     
     ExprType expr_type;
     AstAssignmentExpr* assign_expr;
+};
+
+// ---------------------- DECLRATION ---------------------------
+
+class AstTypeSpecifier
+{
+public:
+    enum class Type {
+        VOID,
+        CHAR,
+        SHORT,
+        INT,
+        LONG,
+        FLOAT,
+        DOUBLE,
+        SIGNED,
+        UNSIGNED,
+        STRUCT,
+        UNION,
+        ENUM,
+        TYPE_NAME
+    };
+    Type type;
+
+    std::map<std::string, AstTypeSpecifier::Type> type_map = {
+        {"void", AstTypeSpecifier::Type::VOID},
+        {"char", AstTypeSpecifier::Type::CHAR},
+        {"short", AstTypeSpecifier::Type::SHORT},
+        {"int", AstTypeSpecifier::Type::INT},
+        {"long", AstTypeSpecifier::Type::LONG},
+        {"float", AstTypeSpecifier::Type::FLOAT},
+        {"double", AstTypeSpecifier::Type::DOUBLE},
+        {"signed", AstTypeSpecifier::Type::SIGNED},
+        {"unsigned", AstTypeSpecifier::Type::UNSIGNED}
+    };
+
+    AstTypeSpecifier(std::string spec)
+    {
+        auto find_pair = type_map.find(spec);
+        if (find_pair != type_map.end())
+        {
+            type = find_pair->second;
+        }  
+    }
+
+    llvm::Type* codegen(Visitor& visitor);
+};
+
+class AstStorageClassSpecifier // : public AstNode
+{
+    // temporarily not used
+};
+
+class AstTypeQualifier //  : public AstNode
+{
+public:
+    // temporarily not used
+    std::string qualifier;
+};
+
+class AstDirectDeclarator // : public AstNode
+{
+public:
+    std::string id_name;
+    AstDirectDeclarator(std::string str): id_name(str) {} 
+};
+
+class AstDeclarator // : public AstNode
+{
+public:
+    // pointer is not supported now
+    enum class DeclaratorType {POINTER, VAR};
+
+    AstDirectDeclarator* direct_declarator;
+    DeclaratorType declarator_type;
+
+    AstDeclarator(AstDirectDeclarator* direct_declarator): direct_declarator(direct_declarator), declarator_type(DeclaratorType::VAR) {}
+};
+
+class AstInitializer : public AstNode
+{
+public:
+    AstAssignmentExpr* assignment_expr;
+
+    AstInitializer(AstAssignmentExpr* expr): assignment_expr(expr) {}
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;    
+};
+
+class AstInitDeclarator // : public AstNode
+{
+public:
+    AstDeclarator* declarator;
+    AstInitializer* initializer;
+
+    AstInitDeclarator(AstDeclarator* decl): declarator(decl), initializer(nullptr) {}
+    AstInitDeclarator(AstDeclarator* decl, AstInitializer* init): declarator(decl), initializer(init) {}   
+};
+
+class AstInitDeclaratorList // : public AstNode
+{
+public:
+    std::vector<AstInitDeclarator* > init_declarators;
+
+    AstInitDeclaratorList(AstInitDeclarator* decl) { init_declarators.push_back(decl); }
+    void add_decl(AstInitDeclarator* decl) { this->init_declarators.push_back(decl); }
+};
+
+class AstDeclSpecifiers : public AstNode
+{
+public:
+    std::vector<AstStorageClassSpecifier*> stor_specs;
+    std::vector<AstTypeSpecifier*> type_specs;
+    std::vector<AstTypeQualifier*> type_quals;
+
+    AstDeclSpecifiers(AstStorageClassSpecifier* stor_spec) { this->stor_specs.push_back(stor_spec); }
+    AstDeclSpecifiers(AstTypeSpecifier* type_spec) { this->type_specs.push_back(type_spec); }
+    AstDeclSpecifiers(AstTypeQualifier* type_qual) { this->type_quals.push_back(type_qual); }
+
+    void add_stor_spec(AstStorageClassSpecifier* stor_spec) { this->stor_specs.push_back(stor_spec); }
+    void add_type_spec(AstTypeSpecifier* type_spec) { this->type_specs.push_back(type_spec); }
+    void add_type_qual(AstTypeQualifier* type_qual) { this->type_quals.push_back(type_qual); }
+    
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+};
+
+// create variables here
+class AstDecl : public AstStatement
+{
+public:
+    AstDeclSpecifiers* decl_specifiers;
+    AstInitDeclaratorList* init_declarator_list;
+
+    AstDecl(AstDeclSpecifiers* decl_spec) : decl_specifiers(decl_spec), init_declarator_list(nullptr) {}
+    AstDecl(AstDeclSpecifiers* decl_spec, AstInitDeclaratorList* init_decl_list): decl_specifiers(decl_spec), init_declarator_list(init_decl_list) {}
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+};
+
+class AstFunctionDef : public AstStatement
+{
+
+};
+
+class AstExternDecl : public AstStatement
+{
+public:
+    enum class DeclType {VAR, FUNC};
+
+    DeclType decl_type;
+    AstDecl* declaration;
+    AstFunctionDef* function_definition;
+
+    AstExternDecl(AstDecl* decl) : declaration(decl), decl_type(DeclType::VAR) {};
+    AstExternDecl(AstFunctionDef* function_def) : function_definition(function_def), decl_type(DeclType::FUNC) {}
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
+};
+
+class AstTranslationUnit : public AstNode
+{
+public:
+    std::vector<AstExternDecl*> external_decl_list;
+
+    AstTranslationUnit(AstExternDecl* exdec) { external_decl_list.push_back(exdec); }
+    void add_exdec(AstExternDecl* exdec) { external_decl_list.push_back(exdec); }
+
+    virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
 // ----------------------------------------------------------------

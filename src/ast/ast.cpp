@@ -88,6 +88,39 @@ llvm::Value* AstExpr::codegen(Visitor& visitor)
     return visitor.codegen(*this);
 }
 
+// ---------------------- DECLRATION -----------------------------
+
+llvm::Value* AstExternDecl::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstDecl::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Type* AstTypeSpecifier::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstDeclSpecifiers::codegen(Visitor& visitor)
+{
+    // do nothing, temporarily
+    return nullptr;
+}
+
+llvm::Value* AstInitializer::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstTranslationUnit::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
 // ----------------------------------------------------------------
 
 llvm::Value* AstInt::codegen(Visitor& visitor)

@@ -9,11 +9,17 @@
 #include "llvm/IR/BasicBlock.h"
 #include "../ast/ast.h"
 
+class LocalEnv
+{
+public:
+    std::map<std::string, llvm::Value*> locals;
+};
+
 class Visitor
 {
 public:
     Visitor();
-    void codegenProgram(AstExpr* root);
+    void codegenProgram(AstTranslationUnit* root);
     void configureTarget();
 
     virtual llvm::Value* codegen(const AstInt& node);
@@ -41,6 +47,12 @@ public:
     virtual llvm::Value* codegen(const AstAssignmentExpr& node);
     virtual llvm::Value* codegen(const AstExpr& node);
 
+    virtual llvm::Value* codegen(const AstExternDecl& node);
+    virtual llvm::Value* codegen(const AstDecl& node);
+    llvm::Type* codegen(const AstTypeSpecifier& node);
+    virtual llvm::Value* codegen(const AstInitializer& node);
+    virtual llvm::Value* codegen(const AstTranslationUnit& node);
+
 
 protected:
     std::unique_ptr<llvm::LLVMContext> context;
@@ -48,7 +60,9 @@ protected:
     std::unique_ptr<llvm::Module> module;
     
     llvm::BasicBlock* block;
-    std::map<std::string, llvm::Value*> locals;
+    
+    // std::map<std::string, llvm::Value*> locals;
+    std::vector<LocalEnv*> envs;
 
 };
 

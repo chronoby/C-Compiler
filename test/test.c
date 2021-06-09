@@ -1,1 +1,3 @@
-c = 1
+int x;
+char y;
+double z;

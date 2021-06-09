@@ -6,6 +6,7 @@ extern "C" FILE *yyin;
 extern AstBlock* programBlock;
 extern AstPrimaryExpr* primary;
 extern AstExpr* expre;
+extern AstTranslationUnit* unit;
 
 int main(int argc, char **argv)
 {
@@ -23,7 +24,7 @@ int main(int argc, char **argv)
 
     Visitor codeGenerator;
     std::cout << "Begin generating code" << std::endl;
-    codeGenerator.codegenProgram(expre);
+    codeGenerator.codegenProgram(unit);
     // codeGenerator.configureTarget();
     
     return 0;
