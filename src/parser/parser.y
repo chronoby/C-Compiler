@@ -87,7 +87,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
-%token PTR_OP INC_OP DEC_OP
+%token PTR_OP INC_OP DEC_OP AND_OP OR_OP EQ_OP NE_OP LE_OP GE_OP
 %token SIZEOF
 
 %start translation_unit
@@ -157,16 +157,16 @@ additive_expr { $$ = new AstShiftExpr($1); }
 
 relational_expr : 
     shift_expr { $$ = new AstRelationalExpr($1); }
-	| relational_expr '<' shift_expr
-	| relational_expr '>' shift_expr
-	/* | relational_expr LE_OP shift_expr
-	| relational_expr GE_OP shift_expr */
+	| relational_expr '<' shift_expr { $$ = new AstRelationalExpr($1, AstRelationalExpr::OpType::LESS, $3); }
+	| relational_expr '>' shift_expr { $$ = new AstRelationalExpr($1, AstRelationalExpr::OpType::GREATER, $3); }
+	| relational_expr LE_OP shift_expr { $$ = new AstRelationalExpr($1, AstRelationalExpr::OpType::LE, $3); }
+	| relational_expr GE_OP shift_expr { $$ = new AstRelationalExpr($1, AstRelationalExpr::OpType::GE, $3); }
     ;
 
 equality_expr : 
     relational_expr { $$ = new AstEqualityExpr($1); }
-	/* | equality_expr EQ_OP relational_expr
-	| equality_expr NE_OP relational_expr */
+	| equality_expr EQ_OP relational_expr { $$ = new AstEqualityExpr($1, AstEqualityExpr::OpType::EQ, $3); }
+	| equality_expr NE_OP relational_expr { $$ = new AstEqualityExpr($1, AstEqualityExpr::OpType::NE, $3); }
     ;
 
 and_expr : 
@@ -186,12 +186,12 @@ inclusive_or_expr :
 
 logical_and_expr : 
     inclusive_or_expr { $$ = new AstLogicalAndExpr($1); }
-	/* | logical_and_expr AND_OP inclusive_or_expr */
+	| logical_and_expr AND_OP inclusive_or_expr { $$ = new AstLogicalAndExpr($1, $3); }
 	;
 
 logical_or_expr : 
     logical_and_expr { $$ = new AstLogicalOrExpr($1); }
-	/* | logical_or_expr OR_OP logical_and_expr */
+	| logical_or_expr OR_OP logical_and_expr { $$ = new AstLogicalOrExpr($1, $3); }
 	;
 
 conditional_expr : 
