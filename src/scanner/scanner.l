@@ -24,15 +24,26 @@ IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
 ASSIGN      "="
 PLUS        "+"
 MINUS       "-"
+MULTI       "*"
+DIV         "/"
+MOD         "%"
 SEMI        ";"
 LP          "("
 RP          ")"
 LB          "{"
 RB          "}"
 DOT         "."
+LESS        "<"
+GREATER     ">"
 PTR_OP      "->"
 INC_OP      "++"
 DEC_OP      "--"
+AND_OP      "&&"
+OR_OP       "||"
+EQ_OP       "=="
+NE_OP       "!="
+LE_OP       "<="
+GE_OP       ">="
 
 DIGIT       [0-9]
 EXP         [Ee][+-]+{DIGIT}+
@@ -68,19 +79,31 @@ STRING      \"(\\.|[^\\"])*\"
 {CHAR}                      SAVE_TOKEN; return CHAR;
 {STRING}                    SAVE_TOKEN; return STRING;
 
+{PTR_OP}                    return PTR_OP;
+{INC_OP}                    return INC_OP;
+{DEC_OP}                    return DEC_OP;
+{AND_OP}                    return AND_OP;
+{OR_OP}                     return OR_OP;
+{EQ_OP}                     return EQ_OP;
+{NE_OP}                     return NE_OP;
+{LE_OP}                     return LE_OP;
+{GE_OP}                     return GE_OP;
+
 {ASSIGN}                    return('=');
 {PLUS}                      return('+');
 {MINUS}                     return('-');
+{MULTI}                     return('*');
+{DIV}                       return('/');
+{MOD}                       return('%');
 {SEMI}                      return(';');
 {LP}                        return('(');
 {RP}                        {return(')');}
 {LB}                        return('{');
 {RB}                        return('}');
 {DOT}                       return '.';
+{LESS}                      return '<';
+{GREATER}                   return '>';
 
-{PTR_OP}                    return PTR_OP;
-{INC_OP}                    return INC_OP;
-{DEC_OP}                    return DEC_OP;
 
 .                           printf("Unknown token!n"); yyterminate();
 

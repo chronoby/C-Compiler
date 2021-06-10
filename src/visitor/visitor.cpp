@@ -214,6 +214,26 @@ llvm::Value* Visitor::codegen(const AstMultiplicativeExpr& node)
         {
             return node.cast_expr->codegen(*this);
         }
+        case AstMultiplicativeExpr::ExprType::OP:
+        {
+            switch (node.op_type)
+            {
+                case AstMultiplicativeExpr::OpType::MUL:
+                {
+                    return this->builder->CreateMul(node.multi_expr->codegen(*this), node.cast_expr->codegen(*this), "mul");
+                }
+                case AstMultiplicativeExpr::OpType::DIV:
+                {
+                    // only for signed int
+                    // to support double, add CreateFDiv. but how to get type?
+                    return this->builder->CreateSDiv(node.multi_expr->codegen(*this), node.cast_expr->codegen(*this), "div");
+                }
+                case AstMultiplicativeExpr::OpType::MOD:
+                {
+                    return this->builder->CreateSRem(node.multi_expr->codegen(*this), node.cast_expr->codegen(*this), "ram");
+                }
+            }
+        }
     }
     return nullptr;
 }
@@ -225,6 +245,20 @@ llvm::Value* Visitor::codegen(const AstAdditiveExpr& node)
         case AstAdditiveExpr::ExprType::MULTI:
         {
             return node.multi_expr->codegen(*this);
+        }
+        case AstAdditiveExpr::ExprType::OP:
+        {
+            switch (node.op_type)
+            {
+                case AstAdditiveExpr::OpType::PLUS:
+                {
+                    return this->builder->CreateAdd(node.add_expr->codegen(*this), node.multi_expr->codegen(*this), "add");
+                }
+                case AstAdditiveExpr::OpType::MINUS:
+                {
+                    return this->builder->CreateSub(node.add_expr->codegen(*this), node.multi_expr->codegen(*this), "sub");
+                }
+            }
         }
     }
     return nullptr;
@@ -250,6 +284,28 @@ llvm::Value* Visitor::codegen(const AstRelationalExpr& node)
         {
             return node.shift_expr->codegen(*this);
         }
+        case AstRelationalExpr::ExprType::OP:
+        {
+            switch (node.op_type)
+            {
+                case AstRelationalExpr::OpType::GREATER:
+                {
+                    return builder->CreateICmpSGT(node.rela_expr->codegen(*this), node.shift_expr->codegen(*this), "gt");
+                }
+                case AstRelationalExpr::OpType::LESS:
+                {
+                    return builder->CreateICmpSLT(node.rela_expr->codegen(*this), node.shift_expr->codegen(*this), "lt");
+                }
+                case AstRelationalExpr::OpType::GE:
+                {
+                    return builder->CreateICmpSGE(node.rela_expr->codegen(*this), node.shift_expr->codegen(*this), "gte");
+                }
+                case AstRelationalExpr::OpType::LE:
+                {
+                    return builder->CreateICmpSLE(node.rela_expr->codegen(*this), node.shift_expr->codegen(*this), "lte");
+                }
+            }
+        }
     }
     return nullptr;
 }
@@ -261,6 +317,20 @@ llvm::Value* Visitor::codegen(const AstEqualityExpr& node)
         case AstEqualityExpr::ExprType::RELATIONAL:
         {
             return node.rela_expr->codegen(*this);
+        }
+        case AstEqualityExpr::ExprType::OP:
+        {
+            switch (node.op_type)
+            {
+                case AstEqualityExpr::OpType::EQ:
+                {
+                    return builder->CreateICmpEQ(node.equal_expr->codegen(*this), node.rela_expr->codegen(*this), "eq");
+                }            
+                case AstEqualityExpr::OpType::NE:
+                {
+                    return builder->CreateICmpNE(node.equal_expr->codegen(*this), node.rela_expr->codegen(*this), "ne");
+                }
+            }
         }
     }
     return nullptr;
@@ -310,6 +380,10 @@ llvm::Value* Visitor::codegen(const AstLogicalAndExpr& node)
         {
             return node.inclusive_expr->codegen(*this);
         }
+        case AstLogicalAndExpr::ExprType::OP:
+        {
+            return builder->CreateLogicalAnd(node.and_expr->codegen(*this), node.inclusive_expr->codegen(*this), "logical_and");
+        }
     }
     return nullptr;
 }
@@ -321,6 +395,10 @@ llvm::Value* Visitor::codegen(const AstLogicalOrExpr& node)
         case AstLogicalOrExpr::ExprType::LOG_AND:
         {
             return node.and_expr->codegen(*this);
+        }
+        case AstLogicalOrExpr::ExprType::OP:
+        {
+            return builder->CreateLogicalOr(node.or_expr->codegen(*this), node.and_expr->codegen(*this), "logical_or");
         }
     }
     return nullptr;
@@ -340,7 +418,6 @@ llvm::Value* Visitor::codegen(const AstConditionalExpr& node)
 
 llvm::Value* Visitor::codegen(const AstAssignmentExpr& node)
 {
-    std::cout << "assign 2" << std::endl;
     switch (node.expr_type)
     {
         case AstAssignmentExpr::ExprType::CONDITIONAL:
@@ -349,7 +426,6 @@ llvm::Value* Visitor::codegen(const AstAssignmentExpr& node)
         }
         case AstAssignmentExpr::ExprType::ASSIGN:
         {
-            std::cout << "assign 3" << std::endl;
             // need update
             return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
         }
@@ -363,7 +439,6 @@ llvm::Value* Visitor::codegen(const AstExpr& node)
     {
         case AstExpr::ExprType::ASSIGN:
         {
-            std::cout << "assign 1" << std::endl;
             return node.assign_expr->codegen(*this);
         }
     }

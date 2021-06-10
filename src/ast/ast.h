@@ -126,11 +126,15 @@ public:
     enum class OpType {MUL, DIV, MOD};
 
     AstMultiplicativeExpr(AstCastExpr* expr): cast_expr(expr), expr_type(ExprType::CAST) { }
+    AstMultiplicativeExpr(AstMultiplicativeExpr* m_expr, OpType op, AstCastExpr* expr): 
+        multi_expr(m_expr), op_type(op), cast_expr(expr), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
+    OpType op_type;
     AstCastExpr* cast_expr;
+    AstMultiplicativeExpr* multi_expr;
 };
 
 class AstAdditiveExpr: public AstExpression
@@ -140,11 +144,15 @@ public:
     enum class OpType {PLUS, MINUS};
 
     AstAdditiveExpr(AstMultiplicativeExpr* expr): multi_expr(expr), expr_type(ExprType::MULTI) { }
+    AstAdditiveExpr(AstAdditiveExpr* a_expr, OpType op, AstMultiplicativeExpr* expr): 
+        add_expr(a_expr), op_type(op), multi_expr(expr), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
+    OpType op_type;
     AstMultiplicativeExpr* multi_expr;
+    AstAdditiveExpr* add_expr;
 };
 
 class AstShiftExpr: public AstExpression
@@ -168,11 +176,15 @@ public:
     enum class OpType {LESS, GREATER, LE, GE};
 
     AstRelationalExpr(AstShiftExpr* expr): shift_expr(expr), expr_type(ExprType::SHIFT) { }
+    AstRelationalExpr(AstRelationalExpr* r_expr, OpType op, AstShiftExpr* expr): 
+        rela_expr(r_expr), op_type(op), shift_expr(expr), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
+    OpType op_type;
     AstShiftExpr* shift_expr;
+    AstRelationalExpr* rela_expr;
 };
 
 class AstEqualityExpr: public AstExpression
@@ -182,11 +194,15 @@ public:
     enum class OpType {EQ, NE};
 
     AstEqualityExpr(AstRelationalExpr* expr): rela_expr(expr), expr_type(ExprType::RELATIONAL) { }
+    AstEqualityExpr(AstEqualityExpr* e_expr, OpType op, AstRelationalExpr* expr): 
+        equal_expr(e_expr), op_type(op), rela_expr(expr), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
+    OpType op_type;
     AstRelationalExpr* rela_expr;
+    AstEqualityExpr* equal_expr;
 };
 
 class AstAndExpr: public AstExpression
@@ -232,11 +248,14 @@ class AstLogicalAndExpr: public AstExpression
 public:
     enum class ExprType {INCLUSIVE, OP};
     AstLogicalAndExpr(AstInclusiveExpr* expr): inclusive_expr(expr), expr_type(ExprType::INCLUSIVE) { }
+    AstLogicalAndExpr(AstLogicalAndExpr* a_expr, AstInclusiveExpr* expr): 
+        and_expr(a_expr), inclusive_expr(expr), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstInclusiveExpr* inclusive_expr;
+    AstLogicalAndExpr* and_expr;
 };
 
 class AstLogicalOrExpr: public AstExpression
@@ -245,11 +264,14 @@ public:
     enum class ExprType {LOG_AND, OP};
 
     AstLogicalOrExpr(AstLogicalAndExpr* expr): and_expr(expr), expr_type(ExprType::LOG_AND) { }
+    AstLogicalOrExpr(AstLogicalOrExpr* o_expr, AstLogicalAndExpr* expr): 
+        or_expr(o_expr), and_expr(expr), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstLogicalAndExpr* and_expr;
+    AstLogicalOrExpr* or_expr;
 };
 
 class AstConditionalExpr: public AstExpression

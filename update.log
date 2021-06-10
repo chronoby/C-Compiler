@@ -36,3 +36,8 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 * 初步增加了从external_declaration以下变量声明的一系列规约项
 * 把原来的visitor中变量符号表locals修改成了符号表的栈，以便后续局部变量和全局变量的区分
 * codegenProgram的顶层模块现在是translation_unit，后续该规则应该无需再更改
+
+-------
+
+2021-06-10 wby:
+* Add operators: `+` `-` `*` `/` `%` `==` `!=` `<` `>` `<=` `>=` `&&` `||`
