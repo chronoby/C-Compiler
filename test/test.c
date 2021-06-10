@@ -1,3 +1,3 @@
-int x = 1 + 2;
-char y = 1.0 * 2;
-double z;
+int x = 5;
+char y = 'a';
+double z = 3.2;
