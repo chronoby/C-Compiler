@@ -442,19 +442,18 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
     {
         auto declarator = init_declarator->declarator;
         auto initializer = init_declarator->initializer;
-        // if (!initializer)
-        // {
-        //     std::cerr << "ERROR: invalid initializer" << std::endl;
-        //     return nullptr;
-        // }
         
-        // auto initializer_value = initializer->codegen(*this);
+        if (initializer)
+        {
+            auto initializer_value = initializer->codegen(*this);
+        }
 
         if (declarator->declarator_type == AstDeclarator::DeclaratorType::VAR)
         {
             std::string var_name = declarator->direct_declarator->id_name;
             auto var_type = type_spec->codegen(*this);
-            auto initializer_zero = llvm::ConstantAggregateZero::get(var_type);
+            auto initializer_v = llvm::ConstantAggregateZero::get(var_type);
+
             if (envs.size() == 1)
             {
                 LocalEnv present_env = *(envs[0]);
@@ -463,7 +462,7 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
                     var_type,
                     false,
                     llvm::GlobalValue::CommonLinkage,
-                    initializer_zero,
+                    initializer_v,
                     var_name
                 );
                 
