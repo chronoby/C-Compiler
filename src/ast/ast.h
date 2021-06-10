@@ -432,9 +432,54 @@ public:
     virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
+class AstStmt : public AstNode
+{
+public:
+    enum class StmtType {LABELED, COMPOUND, EXPR, SELECT, ITER, JUMP};
+
+    StmtType stmt_type;
+    // TO BE FINISHED
+};
+
+class AstStmtList : public AstNode
+{
+public:
+    std::vector<AstStmt*> stmts;
+
+    AstStmtList(AstStmt* stmt) { stmts.push_back(stmts); }
+    void add_stmt(AstStmt* stmt) { stmts.push_back(stmts); }
+};
+
+class AstDeclList: public AstNode
+{
+public:
+    std::vector<AstDecl*> decls;
+
+    AstDeclList(AstDecl* decl) { decls.push_back(decl); }
+    void add_decl(AstDecl* decl) { decls.push_back(decl); }
+};
+
+class AstCompoundStmt : public AstStatement
+{
+public:
+    AstStmtList* stmt_list;
+    AstDeclList* decl_list;
+
+    AstCompoundStmt() : stmt_list(nullptr), decl_list(nullptr) {} 
+    AstCompoundStmt(AstStmtList* stmt_l) : stmt_list(stmt_l), decl_list(nullptr) {}
+    AstCompoundStmt(AstDeclList* decl_l) : stmt_list(nullptr), decl_list(decl_l) {}
+    AstCompoundStmt(AstStmtList* stmt_l, AstDeclList* decl_l) : stmt_list(stmt_l), decl_list(decl_l) {}
+
+    virtual llvm::Value* codegen(Visitor& visitor);
+};
+
 class AstFunctionDef : public AstStatement
 {
-
+public:
+    AstDeclSpecifiers* decl_specifiers;
+    AstDeclarator* declarator;
+    AstDeclList* decl_list;
+    AstCompoundStmt* compound_stmt;
 };
 
 class AstExternDecl : public AstStatement
@@ -462,6 +507,7 @@ public:
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
 };
+
 
 // ----------------------------------------------------------------
 

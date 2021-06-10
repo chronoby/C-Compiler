@@ -27,6 +27,8 @@ MINUS       "-"
 SEMI        ";"
 LP          "("
 RP          ")"
+LB          "{"
+RB          "}"
 DOT         "."
 PTR_OP      "->"
 INC_OP      "++"
@@ -72,6 +74,8 @@ STRING      \"(\\.|[^\\"])*\"
 {SEMI}                      return(';');
 {LP}                        return('(');
 {RP}                        {return(')');}
+{LB}                        return('{');
+{RB}                        return('}');
 {DOT}                       return '.';
 
 {PTR_OP}                    return PTR_OP;

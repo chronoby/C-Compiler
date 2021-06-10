@@ -217,7 +217,7 @@ translation_unit :
 
 external_decl :
     decl { $$ = new AstExternDecl($1);  }
-    /* | function_def */
+    | function_def
     ;
 
 decl :
@@ -280,8 +280,49 @@ initializer :
 	/* | '{' initializer_list ',' '}' */
 	;
 
+compound_stmt : 
+    '{' '}'
+	| '{' stmt_list '}'
+	| '{' decl_list '}'
+	| '{' decl_list stmt_list '}'
+	;
+
+decl_list :
+    decl
+	| decl_list decl
+	;
+
+stmt_list :
+    stmt
+	| stmt_list stmt
+    ;
+
+stmt :
+    labeled_stmt
+    | compound_stmt
+    | expr_stmt
+    | select_stmt
+    | iter_stmt
+    | jump_stmt
+    ;
+
+expr_stmt :
+    ';'
+    | expr ';'
+    ;
+
+/* 括号和参数在direct declarator里面 */
+function_def :
+    : decl_specifiers declarator decl_list compound_stmt
+	| decl_specifiers declarator compound_stmt
+	| declarator decl_list compound_stmt
+	| declarator compound_stmt
+	;
+
+
 /* ------------------------------------------------------------ */ 
 
+/*
 stmts : 
     stmt { $$ = new AstBlock(); $$->pushStmt($<stmt>1); }
     | stmts stmt { $1->pushStmt($<stmt>2); }
@@ -302,5 +343,7 @@ ident :
 numeric : 
     INTEGER { $$ = new AstInt(atol($1->c_str())); delete $1; }
     ;
+
+*/
 
 %%
