@@ -442,17 +442,26 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
     {
         auto declarator = init_declarator->declarator;
         auto initializer = init_declarator->initializer;
-        
-        if (initializer)
-        {
-            auto initializer_value = initializer->codegen(*this);
-        }
 
         if (declarator->declarator_type == AstDeclarator::DeclaratorType::VAR)
         {
             std::string var_name = declarator->direct_declarator->id_name;
             auto var_type = type_spec->codegen(*this);
-            auto initializer_v = llvm::ConstantAggregateZero::get(var_type);
+            llvm::Constant* initializer_v = llvm::ConstantAggregateZero::get(var_type);
+
+            if (initializer)
+            {
+                auto initializer_value = initializer->codegen(*this);
+                if (llvm::isa<llvm::Constant>(initializer_value))
+                {
+                    initializer_v = llvm::cast<llvm::Constant>(initializer_value);
+                }
+                else
+                {
+                    std::cerr << "ERROR: global variables must be initialized with constants" << std::endl;
+                    std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
+                }
+            }
 
             if (envs.size() == 1)
             {
@@ -471,6 +480,7 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
             else
             {
                 LocalEnv present_env = *(envs.back());
+                // to be finished
             }
         }
     }

@@ -34,7 +34,5 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 2021-06-09 wyq:
 * 增加了变量声明功能。由于现在还没有函数概念，暂时仅增加了全局变量。
 * 初步增加了从external_declaration以下变量声明的一系列规约项
-* 全局变量的声明暂时还不支持初始化，只能初始化成0；这是因为llvm的GlobalVariable初始化必须用constant,
-  但是assignment_expr的返回值并不一定是constant，可能需要后续在函数中实现
 * 把原来的visitor中变量符号表locals修改成了符号表的栈，以便后续局部变量和全局变量的区分
 * codegenProgram的顶层模块现在是translation_unit，后续该规则应该无需再更改
