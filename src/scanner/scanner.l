@@ -24,6 +24,9 @@ IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
 ASSIGN      "="
 PLUS        "+"
 MINUS       "-"
+MULTI       "*"
+DIV         "/"
+MOD         "%"
 SEMI        ";"
 LP          "("
 RP          ")"
@@ -69,6 +72,9 @@ STRING      \"(\\.|[^\\"])*\"
 {ASSIGN}                    return('=');
 {PLUS}                      return('+');
 {MINUS}                     return('-');
+{MULTI}                     return('*');
+{DIV}                       return('/');
+{MOD}                       return('%');
 {SEMI}                      return(';');
 {LP}                        return('(');
 {RP}                        {return(')');}

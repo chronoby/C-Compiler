@@ -214,6 +214,27 @@ llvm::Value* Visitor::codegen(const AstMultiplicativeExpr& node)
         {
             return node.cast_expr->codegen(*this);
         }
+        case AstMultiplicativeExpr::ExprType::OP:
+        {
+            switch (node.op_type)
+            {
+                case AstMultiplicativeExpr::OpType::MUL:
+                {
+                    return llvm::BinaryOperator::Create(llvm::Instruction::Mul, node.multi_expr->codegen(*this), 
+                        node.cast_expr->codegen(*this), "", block);
+                }
+                case AstMultiplicativeExpr::OpType::DIV:
+                {
+                    return llvm::BinaryOperator::Create(llvm::Instruction::SDiv, node.multi_expr->codegen(*this), 
+                        node.cast_expr->codegen(*this), "", block);
+                }
+                // case AstMultiplicativeExpr::OpType::MOD: // can't find mod instruction...
+                // {
+                //     return llvm::BinaryOperator::Create(llvm::Instruction::Mod, node.multi_expr->codegen(*this), 
+                //         node.cast_expr->codegen(*this), "", block);
+                // }
+            }
+        }
     }
     return nullptr;
 }
@@ -225,6 +246,22 @@ llvm::Value* Visitor::codegen(const AstAdditiveExpr& node)
         case AstAdditiveExpr::ExprType::MULTI:
         {
             return node.multi_expr->codegen(*this);
+        }
+        case AstAdditiveExpr::ExprType::OP:
+        {
+            switch (node.op_type)
+            {
+                case AstAdditiveExpr::OpType::PLUS:
+                {
+                    return llvm::BinaryOperator::Create(llvm::Instruction::Add, node.add_expr->codegen(*this), 
+                        node.multi_expr->codegen(*this), "", block);
+                }
+                case AstAdditiveExpr::OpType::MINUS:
+                {
+                    return llvm::BinaryOperator::Create(llvm::Instruction::Sub, node.add_expr->codegen(*this), 
+                        node.multi_expr->codegen(*this), "", block);
+                }
+            }
         }
     }
     return nullptr;

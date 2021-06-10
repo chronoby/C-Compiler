@@ -126,11 +126,15 @@ public:
     enum class OpType {MUL, DIV, MOD};
 
     AstMultiplicativeExpr(AstCastExpr* expr): cast_expr(expr), expr_type(ExprType::CAST) { }
+    AstMultiplicativeExpr(AstMultiplicativeExpr* m_expr, OpType op, AstCastExpr* expr): 
+        multi_expr(m_expr), op_type(op), cast_expr(expr), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
+    OpType op_type;
     AstCastExpr* cast_expr;
+    AstMultiplicativeExpr* multi_expr;
 };
 
 class AstAdditiveExpr: public AstExpression
@@ -140,11 +144,15 @@ public:
     enum class OpType {PLUS, MINUS};
 
     AstAdditiveExpr(AstMultiplicativeExpr* expr): multi_expr(expr), expr_type(ExprType::MULTI) { }
+    AstAdditiveExpr(AstAdditiveExpr* a_expr, OpType op, AstMultiplicativeExpr* expr): 
+        add_expr(a_expr), op_type(op), expr_type(ExprType::OP) { }
 
     virtual llvm::Value* codegen(Visitor& visitor) override;
     
     ExprType expr_type;
+    OpType op_type;
     AstMultiplicativeExpr* multi_expr;
+    AstAdditiveExpr* add_expr;
 };
 
 class AstShiftExpr: public AstExpression

@@ -138,15 +138,15 @@ cast_expr :
 
 multiplicative_expr : 
     cast_expr { $$ = new AstMultiplicativeExpr($1); }
-	| multiplicative_expr '*' cast_expr
-	| multiplicative_expr '/' cast_expr
-	| multiplicative_expr '%' cast_expr
+	| multiplicative_expr '*' cast_expr { $$ = new AstMultiplicativeExpr($1, AstMultiplicativeExpr::OpType::MUL, $3); }
+	| multiplicative_expr '/' cast_expr { $$ = new AstMultiplicativeExpr($1, AstMultiplicativeExpr::OpType::DIV, $3); }
+	| multiplicative_expr '%' cast_expr { $$ = new AstMultiplicativeExpr($1, AstMultiplicativeExpr::OpType::MOD, $3); }
     ;
 
 additive_expr : 
-multiplicative_expr { $$ = new AstAdditiveExpr($1); }
-	| additive_expr '+' multiplicative_expr
-	| additive_expr '-' multiplicative_expr
+    multiplicative_expr { $$ = new AstAdditiveExpr($1); }
+	| additive_expr '+' multiplicative_expr { $$ = new AstAdditiveExpr($1, AstAdditiveExpr::OpType::PLUS, $3); }
+	| additive_expr '-' multiplicative_expr { $$ = new AstAdditiveExpr($1, AstAdditiveExpr::OpType::MINUS, $3); }
     ;
 
 shift_expr : 
