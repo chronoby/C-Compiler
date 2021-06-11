@@ -43,10 +43,17 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstDeclarator* declarator;
     AstDirectDeclarator* direct_declarator;
 
+    AstFunctionDef* function_def;
+    AstCompoundStmt* compound_stmt;
+    AstStmt* stmt;
+    AstDeclList* decl_list;
+    AstStmtList* stmt_list;
+    AstExprStmt* expr_stmt;
+
     AstInt* type_int_node;
     AstBlock* block;
     // AstExpression* expr;
-    AstStatement* stmt;
+    // AstStatement* stmt;
     AstIdentifier* ident;
     std::string* string;
 }
@@ -78,6 +85,12 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type<declarator> declarator
 %type<direct_declarator> direct_declarator
 %type<type_specifier> type_specifier;
+
+%type<function_def> function_def;
+%type<compound_stmt> compound_stmt;
+%type<decl_list> decl_list;
+%type<stmt_list> stmt_list;
+%type<expr_stmt> expr_stmt;
 
 %type <ident> ident
 %type <expr> expr 
@@ -265,13 +278,13 @@ declarator :
     ;
 
 direct_declarator : 
-    IDENTIFIER { $$ = new AstDirectDeclarator(*$1); }
+    IDENTIFIER { $$ = new AstDirectDeclarator(*$1, AstDirectDeclarator::DeclaratorType::ID); }
 	/* | '(' declarator ')'
 	| direct_declarator '[' constant_expression ']'
 	| direct_declarator '[' ']'
-	| direct_declarator '(' parameter_type_list ')'
-	| direct_declarator '(' identifier_list ')'
-	| direct_declarator '(' ')' */
+	| direct_declarator '(' identifier_list ')'  
+	| direct_declarator '(' parameter_type_list ')' */
+	| direct_declarator '(' ')' { $$ = $1; $$->setType(AstDirectDeclarator::DeclaratorType::FUNC_EMPTY); }
 	;
 
 initializer :
@@ -281,44 +294,43 @@ initializer :
 	;
 
 compound_stmt : 
-    '{' '}'
-	| '{' stmt_list '}'
-	| '{' decl_list '}'
-	| '{' decl_list stmt_list '}'
+    '{' '}' { $$ = new AstCompoundStmt(); }
+	| '{' stmt_list '}' { $$ = new AstCompoundStmt($2); }
+	| '{' decl_list '}' { $$ = new AstCompoundStmt($2); }
+	| '{' decl_list stmt_list '}' { $$ = new AstCompoundStmt($2, $3); }
 	;
 
 decl_list :
-    decl
-	| decl_list decl
+    decl { $$ = new AstDeclList($1); }
+	| decl_list decl { $$ = $1; $$->add_decl($2); }
 	;
 
-stmt_list :
-    stmt
-	| stmt_list stmt
+stmt_list : 
+    stmt { $$ = new AstStmtList($1); }
+	| stmt_list stmt { $$ = $1; $$->add_stmt($2); }
     ;
 
 stmt :
-    labeled_stmt
-    | compound_stmt
-    | expr_stmt
+    /* labeled_stmt
+    |*/ compound_stmt
+    | expr_stmt /*
     | select_stmt
     | iter_stmt
-    | jump_stmt
+    | jump_stmt */
     ;
 
 expr_stmt :
-    ';'
-    | expr ';'
+    ';' { $$ = new AstExprStmt(); }
+    | expr ';' { $$ = new AstExprStmt($1); }
     ;
 
 /* 括号和参数在direct declarator里面 */
 function_def :
-    : decl_specifiers declarator decl_list compound_stmt
-	| decl_specifiers declarator compound_stmt
-	| declarator decl_list compound_stmt
-	| declarator compound_stmt
+    decl_specifiers declarator decl_list compound_stmt { $$ = new AstFunctionDef($1, $2, $3, $4); }
+	| decl_specifiers declarator compound_stmt { $$ = new AstFunctionDef($1, $2, $3); }
+	| declarator decl_list compound_stmt { $$ = new AstFunctionDef($1, $2, $3); }
+	| declarator compound_stmt { $$ = new AstFunctionDef($1, $2); }
 	;
-
 
 /* ------------------------------------------------------------ */ 
 

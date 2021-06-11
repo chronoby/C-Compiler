@@ -52,6 +52,11 @@ public:
     llvm::Type* codegen(const AstTypeSpecifier& node);
     virtual llvm::Value* codegen(const AstInitializer& node);
     virtual llvm::Value* codegen(const AstTranslationUnit& node);
+    virtual llvm::Value* codegen(const AstFunctionDef& node);
+
+    virtual llvm::Value* codegen(const AstCompoundStmt& node);
+    virtual llvm::Value* codegen(const AstDeclList& node);
+    virtual llvm::Value* codegen(const AstStmtList& node);
 
 
 protected:

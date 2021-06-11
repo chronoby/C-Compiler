@@ -121,6 +121,26 @@ llvm::Value* AstTranslationUnit::codegen(Visitor& visitor)
     return visitor.codegen(*this);
 }
 
+llvm::Value* AstFunctionDef::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstStmtList::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstCompoundStmt::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstDeclList::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
 // ----------------------------------------------------------------
 
 llvm::Value* AstInt::codegen(Visitor& visitor)

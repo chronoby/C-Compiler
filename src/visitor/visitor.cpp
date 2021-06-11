@@ -562,6 +562,31 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
     return nullptr;
 }
 
+llvm::Value* Visitor::codegen(const AstFunctionDef& node)
+{
+    llvm::Type* result_type = llvm::Type::getInt32Ty(*context);
+    auto decl_specs = node.decl_specifiers;
+    if (decl_specs && decl_specs->type_specs.size() > 0)
+    {  
+        auto type_specs = decl_specs->type_specs[0];
+        result_type = type_specs->codegen(*this);
+    }
+    
+    auto direct_declarator = node.declarator->direct_declarator;
+    llvm::FunctionType* func_type;
+    switch(direct_declarator->declarator_type)
+    {
+        case AstDirectDeclarator::DeclaratorType::FUNC_EMPTY:
+        {
+            func_type = llvm::FunctionType::get(result_type, false);
+        }
+    }
+    llvm::Function* function = llvm::Function::Create(func_type, llvm::GlobalValue::ExternalLinkage, direct_declarator->id_name, &*this->module);
+    llvm::BasicBlock* basicBlock = llvm::BasicBlock::Create(*context, "entry", function, nullptr);
+
+    return function;
+}
+
 llvm::Value* Visitor::codegen(const AstInitializer& node)
 {
     return node.assignment_expr->codegen(*this);
@@ -573,6 +598,21 @@ llvm::Value* Visitor::codegen(const AstTranslationUnit& node)
     {
         i->codegen(*this);
     }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstCompoundStmt& node)
+{
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstDeclList& node)
+{
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstStmtList& node)
+{
     return nullptr;
 }
 
@@ -599,8 +639,8 @@ llvm::Value* Visitor::codegen(const AstIdentifier& node)
 
 llvm::Value* Visitor::codegen(const AstExprStmt& node)
 {
-    std::cout << "Creating expression statement" << std::endl;
-    return node.getExpr()->codegen(*this);
+    // std::cout << "Creating expression statement" << std::endl;
+    // return node.getExpr()->codegen(*this);
 }
 
 llvm::Value* Visitor::codegen(const AstAssignment& node)
