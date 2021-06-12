@@ -1,13 +1,14 @@
 int x = 12;
 double y = 5.;
 
-int main()
+int plus(int a, int b)
 {
-    int xa = 5;
-    double ya = 12;
+    int c = 5;
 }
 
-char func(int a)
+int main()
 {
-    double c = 12;
+    int a = 5;
+    int b = 2;
+    plus(a, b);
 }

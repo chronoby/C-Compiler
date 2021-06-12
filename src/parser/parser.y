@@ -48,6 +48,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstParameterTypeList* parameter_type_list;
     AstParameterDecl* parameter_decl;
     AstParameterList* parameter_list;
+    AstArgumentExprList* argument_expr_list;
 
     std::string* string;
 }
@@ -90,6 +91,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type<parameter_type_list> parameter_type_list;
 %type<parameter_decl> parameter_decl;
 %type<parameter_list> parameter_list;
+%type<argument_expr_list> argument_expr_list;
 
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
@@ -112,20 +114,39 @@ primary_expr :
 
 postfix_expr :
     primary_expr { $$ = new AstPostfixExpr($1); }
-    | postfix_expr '[' INTEGER ']' { $$ = new AstPostfixExpr($1, *$3); } /* NOTE: index set as int now */
+    | postfix_expr '[' INTEGER ']' { 
+        $$ = $1;
+        $$->setExprType(AstPostfixExpr::ExprType::IDX);
+    } /* NOTE: index set as int now */
     /* | postfix_expr '[' expression ']' */ 
-    /* | postfix_expr '(' ')' todo
-    | postfix_expr '(' argument_expr_list ')'
-    | postfix_expr '.' IDENTIFIER
+    | postfix_expr '(' ')' { 
+        $$ = $1; 
+        $$->setExprType(AstPostfixExpr::ExprType::FUNC);
+    }
+    | postfix_expr '(' argument_expr_list ')' {
+        $$ = $1;
+        $$->setExprType(AstPostfixExpr::ExprType::FUNC_PARAM);
+        $$->argument_expr_list = $3;
+    }
+    
+    /*| postfix_expr '.' IDENTIFIER
     | postfix_expr PTR_OP IDENTIFIER */
-    | postfix_expr INC_OP { $$ = new AstPostfixExpr($1, AstPostfixExpr::OpType::INC); }
-    | postfix_expr DEC_OP { $$ = new AstPostfixExpr($1, AstPostfixExpr::OpType::DEC); }
+    | postfix_expr INC_OP { 
+        $$ = $1;
+        $$->setExprType(AstPostfixExpr::ExprType::OP);
+        $$->setOpType(AstPostfixExpr::OpType::INC);
+    }
+    | postfix_expr DEC_OP { 
+        $$ = $1;
+        $$->setExprType(AstPostfixExpr::ExprType::OP);
+        $$->setOpType(AstPostfixExpr::OpType::DEC);
+    }
     ;
 
-/* argument_expression_list : 
-    assignment_expression
-	| argument_expression_list ',' assignment_expression
-	; */
+argument_expr_list : 
+    assignment_expr { $$ = new AstArgumentExprList($1); }
+	| argument_expr_list ',' assignment_expr { $$ = $1; $$->add_expr($3); }
+	; 
 
 unary_expr : 
     postfix_expr { $$ = new AstUnaryExpr($1); }

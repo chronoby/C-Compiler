@@ -48,3 +48,10 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 * 增加函数声明，包括含参的和不含参的
 * 增加局部变量声明和局部环境栈
 * 调整了ast.h和parser.y的格式
+* 修改了postfix expr的写法
+
+------
+
+2021-06-12 wyq:
+* 修正了变量调用的方式
+* 增加了函数调用(但函数内部调用参数时有bug，待修改)

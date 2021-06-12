@@ -62,9 +62,12 @@ class AstFunctionDef;
 
 // --------------------------- expression -------------------------
 
-class AstArgumentExprList : public AstExpression
+class AstArgumentExprList // : public AstExpression
 {
-
+public:
+    std::vector<AstAssignmentExpr*> expr_list;
+    AstArgumentExprList(AstAssignmentExpr* assign_expr) { expr_list.push_back(assign_expr); }
+    void add_expr(AstAssignmentExpr* assign_expr) { expr_list.push_back(assign_expr); }
 };
 
 // Type for primary_expr
@@ -107,11 +110,13 @@ public:
     enum class OpType {INC, DEC};
     
     // TO BE FINISED
-    AstPostfixExpr(AstPrimaryExpr* primary_expr): primary_expr(primary_expr), expr_type(ExprType::PRIMARY) {};
-    AstPostfixExpr(AstPostfixExpr* expr, std::string ind): postfix_expr(expr), identifier_name(expr->identifier_name), 
-        index(ind), expr_type(ExprType::IDX) { }
-    AstPostfixExpr(AstPostfixExpr* expr, OpType op): postfix_expr(expr), op_type(op), expr_type(ExprType::OP) { }
-
+    AstPostfixExpr(AstPrimaryExpr* primary_expr): primary_expr(primary_expr), expr_type(ExprType::PRIMARY), identifier_name(primary_expr->identifier_name) {};
+    // AstPostfixExpr(AstPostfixExpr* expr, std::string ind): postfix_expr(expr), identifier_name(expr->identifier_name), 
+    //     index(ind), expr_type(ExprType::IDX) { }
+    // AstPostfixExpr(AstPostfixExpr* expr, OpType op): postfix_expr(expr), op_type(op), expr_type(ExprType::OP) { }
+    // AstPostfixExpr(AstPostfixExpr* expr, ExprType expr_type): postfix_expr(expr), expr_type(expr_type) {}
+    void setExprType(ExprType expr_type) { this->expr_type = expr_type; }
+    void setOpType(OpType op_type) { this->op_type = op_type; }
     virtual llvm::Value* codegen(Visitor& visitor) override;
 // private:
     // which grammar rule is used to derive this node
@@ -120,7 +125,7 @@ public:
     // TO BE FINISHED
     AstPrimaryExpr* primary_expr;
 
-    AstPostfixExpr* postfix_expr;
+    // AstPostfixExpr* postfix_expr;
     AstArgumentExprList* argument_expr_list;
     AstExpr* expr;
     OpType op_type;
@@ -586,14 +591,14 @@ public:
     virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
-class AstExprStmt //  : public AstNode
+class AstExprStmt  : public AstNode
 {
 public:
     AstExpr* expr;
     AstExprStmt() : expr(nullptr) {}
     AstExprStmt(AstExpr* e): expr(e) {}
 
-    // virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
 class AstTranslationUnit : public AstNode

@@ -13,6 +13,8 @@ class LocalEnv
 {
 public:
     std::map<std::string, llvm::Value*> locals;
+    std::map<std::string, llvm::Function*> functions;
+    std::map<std::string, llvm::FunctionType*> function_types;
 };
 
 class Visitor
@@ -52,6 +54,7 @@ public:
     virtual llvm::Value* codegen(const AstStmtList& node);
 
     virtual llvm::Value* codegen(const AstStmt& node);
+    virtual llvm::Value* codegen(const AstExprStmt& node);
 
 
 protected:

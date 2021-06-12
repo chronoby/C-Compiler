@@ -138,17 +138,20 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
     }
     case AstPrimaryExpr::ExprType::ID:
     {
-        // NOTE: to be updated when the variable mapping mechanism updates
-        auto locals = this->envs.back()->locals;
-        auto local_pair = locals.find(node.identifier_name);
-        if (local_pair != locals.end())
+        for (int i = this->envs.size() - 1; i >= 0; i--)
         {
-            return this->builder->CreateLoad(local_pair->second);
-        }
-        else
-        {
-            std::cerr << "ERROR: identifier not defined: " << node.identifier_name << std::endl;
-            return nullptr;
+            auto env = this->envs[i];
+            auto pair = env->locals.find(node.identifier_name);
+            if (pair != env->locals.end())
+            {
+                auto var = pair->second;
+                return this->builder->CreateLoad(var);
+            }
+            if (i == 0)
+            {
+                std::cerr << "ERROR: identifier not defined: " << node.identifier_name << std::endl;
+                return nullptr;
+            }
         }
     }
     case AstPrimaryExpr::ExprType::PR_EXPR:
@@ -178,7 +181,59 @@ llvm::Value* Visitor::codegen(const AstPostfixExpr& node)
         // {
         //     return node.primary_expr->codegen(*this);
         // }
-        
+        case AstPostfixExpr::ExprType::FUNC:
+        {
+            llvm::Function* func = nullptr;
+            for (int i = this->envs.size() - 1; i >= 0; i--)
+            {
+                auto env = this->envs[i];
+                auto pair = env->functions.find(node.identifier_name);
+                if (pair != env->functions.end())
+                {
+                    func = pair->second;
+                    break;
+                }
+                if (i == 0)
+                {
+                    std::cerr << "ERROR: function not found: "<< node.identifier_name << std::endl;
+                    return nullptr;
+                }
+            }
+            // std::cerr << "func: " << func << std::endl;
+            return this->builder->CreateCall(func);
+        }
+        case AstPostfixExpr::ExprType::FUNC_PARAM:
+        {
+            llvm::Function* func = nullptr;
+            llvm::FunctionType* func_type = nullptr;
+            for (int i = this->envs.size() - 1; i >= 0; i--)
+            {
+                auto env = this->envs[i];
+                auto pair = env->functions.find(node.identifier_name);
+                if (pair != env->functions.end())
+                {
+                    func = pair->second;
+                    auto pair_type = env->function_types.find(node.identifier_name);
+                    func_type = pair_type->second;
+                    break;
+                }
+                if (i == 0)
+                {
+                    std::cerr << "ERROR: function not found: "<< node.identifier_name << std::endl;
+                    return nullptr;
+                }
+            }
+            std::vector<llvm::Value*> args;
+            auto expr_list = node.argument_expr_list;
+            if (expr_list)
+            {
+                for (auto expr : expr_list->expr_list)
+                {
+                    args.push_back(expr->codegen(*this));
+                }
+            }
+            return this->builder->CreateCall(func, args);
+        }
     }
     return nullptr;
 }
@@ -526,8 +581,8 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
                     }
                 }
 
-                LocalEnv present_env = *(envs[0]);
-                if (present_env.locals.find(var_name) != present_env.locals.end())
+                LocalEnv* present_env = envs[0];
+                if (present_env->locals.find(var_name) != present_env->locals.end())
                 {
                     std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
                     return nullptr;
@@ -542,13 +597,13 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
                     var_name
                 );
                 
-                present_env.locals.insert({var_name, var});
+                present_env->locals.insert({var_name, var});
                 return var;
             }
             else
             {
-                LocalEnv present_env = *(envs.back());
-                if (present_env.locals.find(var_name) != present_env.locals.end())
+                LocalEnv* present_env = envs.back();
+                if (present_env->locals.find(var_name) != present_env->locals.end())
                 {
                     std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
                     return nullptr;
@@ -562,7 +617,7 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
                     llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
                 }
 
-                present_env.locals.insert({var_name, var});
+                present_env->locals.insert({var_name, var});
             }
         }
     }
@@ -576,8 +631,15 @@ llvm::Value* Visitor::codegen(const AstInitializer& node)
 
 llvm::Value* Visitor::codegen(const AstStmt& node)
 {
-    // to be finished
-    return nullptr;
+    switch (node.stmt_type)
+    {
+    case AstStmt::StmtType::EXPR :
+        return node.expr_stmt->codegen(*this);
+        break;
+    
+    default:
+        break;
+    }
 }
 
 llvm::Value* Visitor::codegen(const AstCompoundStmt& node)
@@ -687,7 +749,15 @@ llvm::Value* Visitor::codegen(const AstFunctionDef& node)
     this->builder->SetInsertPoint(entry);
 
     node.compound_stmt->codegen(*this);
+    this->envs.back()->functions.insert({direct_declarator->id_name, function});
+    this->envs.back()->function_types.insert({direct_declarator->id_name, func_type});
     return function;
 }
+
+llvm::Value* Visitor::codegen(const AstExprStmt& node)
+{
+    return node.expr->codegen(*this);
+}
+
 // ------------------------------------------------------------------------------
 

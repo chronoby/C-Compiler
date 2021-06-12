@@ -147,3 +147,8 @@ llvm::Value* AstDeclList::codegen(Visitor& visitor)
 }
 
 // ----------------------------------------------------------------
+
+llvm::Value* AstExprStmt::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
