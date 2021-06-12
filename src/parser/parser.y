@@ -97,7 +97,6 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %token SIZEOF
 
 %start translation_unit
-
 %%
 
 primary_expr :
@@ -216,16 +215,6 @@ expr :
 	| expr ',' assignment_expr
     ;
 
-translation_unit : 
-    external_decl { $$ = new AstTranslationUnit($1); unit = $$; }
-    | translation_unit external_decl { unit = $1; unit->add_exdec($2); }
-    ;
-
-external_decl :
-    decl { $$ = new AstExternDecl($1);  }
-    | function_def
-    ;
-
 decl :
     decl_specifiers ';' { $$ = new AstDecl($1); }
     | decl_specifiers init_declarator_list ';' { $$ = new AstDecl($1, $2); }
@@ -302,6 +291,15 @@ initializer :
 	/* | '{' initializer_list ',' '}' */
 	;
 
+stmt :
+    /* labeled_stmt
+    |*/ compound_stmt { $$ = new AstStmt($1); }
+    | expr_stmt { $$ = new AstStmt($1); } /*
+    | select_stmt
+    | iter_stmt
+    | jump_stmt */
+    ;
+
 compound_stmt : 
     '{' '}' { $$ = new AstCompoundStmt(); }
 	| '{' stmt_list '}' { $$ = new AstCompoundStmt($2); }
@@ -319,21 +317,21 @@ stmt_list :
 	| stmt_list stmt { $$ = $1; $$->add_stmt($2); }
     ;
 
-stmt :
-    /* labeled_stmt
-    |*/ compound_stmt { $$ = new AstStmt($1); }
-    | expr_stmt { $$ = new AstStmt($1); } /*
-    | select_stmt
-    | iter_stmt
-    | jump_stmt */
-    ;
-
 expr_stmt :
     ';' { $$ = new AstExprStmt(); }
     | expr ';' { $$ = new AstExprStmt($1); }
     ;
 
-/* 括号和参数在direct declarator里面 */
+translation_unit : 
+    external_decl { $$ = new AstTranslationUnit($1); unit = $$; }
+    | translation_unit external_decl { unit = $1; unit->add_exdec($2); }
+    ;
+
+external_decl :
+    decl { $$ = new AstExternDecl($1);  }
+    | function_def
+    ;
+
 function_def :
     decl_specifiers declarator decl_list compound_stmt { $$ = new AstFunctionDef($1, $2, $3, $4); }
 	| decl_specifiers declarator compound_stmt { $$ = new AstFunctionDef($1, $2, $3); }
