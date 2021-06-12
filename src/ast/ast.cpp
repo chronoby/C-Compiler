@@ -116,6 +116,16 @@ llvm::Value* AstInitializer::codegen(Visitor& visitor)
     return visitor.codegen(*this);
 }
 
+llvm::Value* AstStmt::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
+llvm::Value* AstCompoundStmt::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
 llvm::Value* AstTranslationUnit::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
@@ -127,11 +137,6 @@ llvm::Value* AstFunctionDef::codegen(Visitor& visitor)
 }
 
 llvm::Value* AstStmtList::codegen(Visitor& visitor)
-{
-    return visitor.codegen(*this);
-}
-
-llvm::Value* AstCompoundStmt::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }

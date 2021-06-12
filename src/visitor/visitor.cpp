@@ -29,10 +29,10 @@ Visitor::Visitor()
     module = std::make_unique<llvm::Module>("main", *context);
     
 
-    std::vector<llvm::Type*> argTypes;
-    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*context), argTypes, false);
-    llvm::Function* mainFunction = llvm::Function::Create(ftype, llvm::Function::InternalLinkage, "main", *module);
-    block = llvm::BasicBlock::Create(*context, "entry", mainFunction, 0);
+    // std::vector<llvm::Type*> argTypes;
+    // llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*context), argTypes, false);
+    // llvm::Function* mainFunction = llvm::Function::Create(ftype, llvm::Function::InternalLinkage, "main", *module);
+    // block = llvm::BasicBlock::Create(*context, "entry", mainFunction, 0);
 
     envs.push_back(new LocalEnv());
 }
@@ -428,7 +428,8 @@ llvm::Value* Visitor::codegen(const AstAssignmentExpr& node)
         case AstAssignmentExpr::ExprType::ASSIGN:
         {
             // need update
-            return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
+            // return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
+            return this->builder->CreateStore(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false);
         }
     }
     return nullptr;
@@ -447,21 +448,6 @@ llvm::Value* Visitor::codegen(const AstExpr& node)
 }
 
 // ---------------- declaration ----------------------------
-
-llvm::Value* Visitor::codegen(const AstExternDecl& node)
-{
-    switch(node.decl_type)
-    {
-        case (AstExternDecl::DeclType::VAR):
-        {
-            return node.declaration->codegen(*this);
-        }
-        case (AstExternDecl::DeclType::FUNC):
-        {
-            return node.function_definition->codegen(*this);
-        }
-    }
-}
 
 llvm::Type* Visitor::codegen(const AstTypeSpecifier& node)
 {
@@ -524,23 +510,29 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
             auto var_type = type_spec->codegen(*this);
             llvm::Constant* initializer_v = llvm::ConstantAggregateZero::get(var_type);
 
-            if (initializer)
-            {
-                auto initializer_value = initializer->codegen(*this);
-                if (llvm::isa<llvm::Constant>(initializer_value))
-                {
-                    initializer_v = llvm::cast<llvm::Constant>(initializer_value);
-                }
-                else
-                {
-                    std::cerr << "ERROR: global variables must be initialized with constants" << std::endl;
-                    std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
-                }
-            }
-
             if (envs.size() == 1)
             {
+                if (initializer)
+                {
+                    auto initializer_value = initializer->codegen(*this);
+                    if (llvm::isa<llvm::Constant>(initializer_value))
+                    {
+                        initializer_v = llvm::cast<llvm::Constant>(initializer_value);
+                    }
+                    else
+                    {
+                        std::cerr << "ERROR: global variables must be initialized with constants" << std::endl;
+                        std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
+                    }
+                }
+
                 LocalEnv present_env = *(envs[0]);
+                if (present_env.locals.find(var_name) != present_env.locals.end())
+                {
+                    std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
+                    return nullptr;
+                }
+
                 llvm::GlobalVariable *var = new llvm::GlobalVariable(
                     *(this->module),
                     var_type,
@@ -551,15 +543,108 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
                 );
                 
                 present_env.locals.insert({var_name, var});
+                return var;
             }
             else
             {
                 LocalEnv present_env = *(envs.back());
-                // to be finished
+                if (present_env.locals.find(var_name) != present_env.locals.end())
+                {
+                    std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
+                    return nullptr;
+                }
+
+                llvm::AllocaInst* var = this->builder->CreateAlloca(var_type, nullptr, var_name);
+
+                if (initializer)
+                {
+                    auto initializer_value = initializer->codegen(*this);
+                    llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
+                }
+
+                present_env.locals.insert({var_name, var});
             }
         }
     }
     return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstInitializer& node)
+{
+    return node.assignment_expr->codegen(*this);
+}
+
+llvm::Value* Visitor::codegen(const AstStmt& node)
+{
+    // to be finished
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstCompoundStmt& node)
+{
+    auto env = new LocalEnv();
+    this->envs.push_back(env);
+    
+    if (node.decl_list)
+    {
+        node.decl_list->codegen(*this);
+    }
+
+    if (node.stmt_list)
+    {
+        node.stmt_list->codegen(*this);
+    }
+
+    this->envs.pop_back();
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstDeclList& node)
+{
+    for (auto decl : node.decls)
+    {
+        if (decl)
+        {
+            decl->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstStmtList& node)
+{
+    for (auto stmt : node.stmts)
+    {
+        if (stmt)
+        {
+            stmt->codegen(*this);
+        }
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstTranslationUnit& node)
+{
+    for (auto i : node.external_decl_list)
+    {
+        i->codegen(*this);
+    }
+    return nullptr;
+}
+
+llvm::Value* Visitor::codegen(const AstExternDecl& node)
+{
+    switch(node.decl_type)
+    {
+        case (AstExternDecl::DeclType::VAR):
+        {
+            return node.declaration->codegen(*this);
+        }
+        case (AstExternDecl::DeclType::FUNC):
+        {
+            return node.function_definition->codegen(*this);
+        }
+    }
 }
 
 llvm::Value* Visitor::codegen(const AstFunctionDef& node)
@@ -596,40 +681,13 @@ llvm::Value* Visitor::codegen(const AstFunctionDef& node)
             break;
         }
     }
+    
     llvm::Function* function = llvm::Function::Create(func_type, llvm::GlobalValue::ExternalLinkage, direct_declarator->id_name, &*this->module);
-    llvm::BasicBlock* basicBlock = llvm::BasicBlock::Create(*context, "entry", function, nullptr);
+    llvm::BasicBlock* entry = llvm::BasicBlock::Create(*context, "entry", function, nullptr);
+    this->builder->SetInsertPoint(entry);
 
+    node.compound_stmt->codegen(*this);
     return function;
 }
-
-llvm::Value* Visitor::codegen(const AstInitializer& node)
-{
-    return node.assignment_expr->codegen(*this);
-}
-
-llvm::Value* Visitor::codegen(const AstTranslationUnit& node)
-{
-    for (auto i : node.external_decl_list)
-    {
-        i->codegen(*this);
-    }
-    return nullptr;
-}
-
-llvm::Value* Visitor::codegen(const AstCompoundStmt& node)
-{
-    return nullptr;
-}
-
-llvm::Value* Visitor::codegen(const AstDeclList& node)
-{
-    return nullptr;
-}
-
-llvm::Value* Visitor::codegen(const AstStmtList& node)
-{
-    return nullptr;
-}
-
 // ------------------------------------------------------------------------------
 

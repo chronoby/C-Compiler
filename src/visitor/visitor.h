@@ -51,6 +51,8 @@ public:
     virtual llvm::Value* codegen(const AstDeclList& node);
     virtual llvm::Value* codegen(const AstStmtList& node);
 
+    virtual llvm::Value* codegen(const AstStmt& node);
+
 
 protected:
     std::unique_ptr<llvm::LLVMContext> context;

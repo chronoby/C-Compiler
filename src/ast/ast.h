@@ -535,7 +535,7 @@ public:
     virtual llvm::Value* codegen(Visitor& visitor) override;    
 };
 
-class AstStmt // : public AstNode
+class AstStmt : public AstNode
 {
 public:
     enum class StmtType {LABELED, COMPOUND, EXPR, SELECT, ITER, JUMP};
@@ -547,7 +547,7 @@ public:
     AstStmt(AstCompoundStmt* compound_stmt): compound_stmt(compound_stmt), stmt_type(StmtType::COMPOUND) {}
     AstStmt(AstExprStmt* expr_stmt): expr_stmt(expr_stmt), stmt_type(StmtType::EXPR) {}
 
-    // virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
 class AstCompoundStmt : public AstStatement
