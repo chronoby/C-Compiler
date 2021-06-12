@@ -33,6 +33,7 @@ RP          ")"
 LB          "{"
 RB          "}"
 DOT         "."
+COMMA       ","
 LESS        "<"
 GREATER     ">"
 PTR_OP      "->"
@@ -44,6 +45,7 @@ EQ_OP       "=="
 NE_OP       "!="
 LE_OP       "<="
 GE_OP       ">="
+ELLIPSIS    "..."
 
 DIGIT       [0-9]
 EXP         [Ee][+-]+{DIGIT}+
@@ -101,8 +103,10 @@ STRING      \"(\\.|[^\\"])*\"
 {LB}                        return('{');
 {RB}                        return('}');
 {DOT}                       return '.';
+{COMMA}                     return ',';
 {LESS}                      return '<';
 {GREATER}                   return '>';
+{ELLIPSIS}                  return ELLIPSIS;
 
 
 .                           printf("Unknown token!n"); yyterminate();

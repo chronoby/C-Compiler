@@ -1,10 +1,6 @@
 %{
 #include <iostream>
 #include "../ast/ast.h"
-AstBlock* programBlock;
-AstPrimaryExpr* primary;
-AstExpr* expre;
-AstExternDecl* exdec;
 AstTranslationUnit* unit;
 
 extern int yylex();
@@ -49,12 +45,10 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstDeclList* decl_list;
     AstStmtList* stmt_list;
     AstExprStmt* expr_stmt;
+    AstParameterTypeList* parameter_type_list;
+    AstParameterDecl* parameter_decl;
+    AstParameterList* parameter_list;
 
-    AstInt* type_int_node;
-    AstBlock* block;
-    // AstExpression* expr;
-    // AstStatement* stmt;
-    AstIdentifier* ident;
     std::string* string;
 }
 
@@ -74,6 +68,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type <log_or_expr> logical_or_expr
 %type <cond_expr> conditional_expr
 %type <assign_expr> assignment_expr
+%type <expr> expr
 
 %type<translation_unit> translation_unit
 %type<extern_decl> external_decl
@@ -90,17 +85,15 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type<compound_stmt> compound_stmt;
 %type<decl_list> decl_list;
 %type<stmt_list> stmt_list;
+%type<stmt> stmt;
 %type<expr_stmt> expr_stmt;
-
-%type <ident> ident
-%type <expr> expr 
-%type <block> stmts
-%type <stmt> stmt var_decl
-%type <type_int_node> numeric
+%type<parameter_type_list> parameter_type_list;
+%type<parameter_decl> parameter_decl;
+%type<parameter_list> parameter_list;
 
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
-%token PTR_OP INC_OP DEC_OP AND_OP OR_OP EQ_OP NE_OP LE_OP GE_OP
+%token PTR_OP INC_OP DEC_OP AND_OP OR_OP EQ_OP NE_OP LE_OP GE_OP ELLIPSIS
 %token SIZEOF
 
 %start translation_unit
@@ -240,11 +233,11 @@ decl :
 
 decl_specifiers :
     /* storage_class_specifier
-	| storage_class_specifier declaration_specifiers
+	| storage_class_specifier decl_specifiers
 	| */ type_specifier { $$ = new AstDeclSpecifiers($1); }
-	/* | type_specifier declaration_specifiers
+	/* | type_specifier decl_specifiers
 	| type_qualifier
-	| type_qualifier declaration_specifiers */
+	| type_qualifier decl_specifiers */
 	;
 
 type_specifier :
@@ -282,9 +275,25 @@ direct_declarator :
 	/* | '(' declarator ')'
 	| direct_declarator '[' constant_expression ']'
 	| direct_declarator '[' ']'
-	| direct_declarator '(' identifier_list ')'  
-	| direct_declarator '(' parameter_type_list ')' */
+	| direct_declarator '(' identifier_list ')'  */
+	| direct_declarator '(' parameter_type_list ')' { $$ = $1; $$->param_type_list=$3; $$->setType(AstDirectDeclarator::DeclaratorType::FUNC_PARAM);  }
 	| direct_declarator '(' ')' { $$ = $1; $$->setType(AstDirectDeclarator::DeclaratorType::FUNC_EMPTY); }
+	;
+
+parameter_type_list :
+    parameter_list  { $$ = new AstParameterTypeList($1, false); }
+	| parameter_list ',' ELLIPSIS { $$ = new AstParameterTypeList($1, true); }
+	;
+
+parameter_list :
+    parameter_decl  { $$ = new AstParameterList($1); }
+	| parameter_list ',' parameter_decl { $$ = $1; $$->add_param_decl($3); }
+	;
+
+parameter_decl :
+    decl_specifiers declarator { $$ = new AstParameterDecl($1, $2); }
+	/* | decl_specifiers abstract_declarator */
+	| decl_specifiers { $$ = new AstParameterDecl($1); }
 	;
 
 initializer :
@@ -312,8 +321,8 @@ stmt_list :
 
 stmt :
     /* labeled_stmt
-    |*/ compound_stmt
-    | expr_stmt /*
+    |*/ compound_stmt { $$ = new AstStmt($1); }
+    | expr_stmt { $$ = new AstStmt($1); } /*
     | select_stmt
     | iter_stmt
     | jump_stmt */
@@ -333,29 +342,5 @@ function_def :
 	;
 
 /* ------------------------------------------------------------ */ 
-
-/*
-stmts : 
-    stmt { $$ = new AstBlock(); $$->pushStmt($<stmt>1); }
-    | stmts stmt { $1->pushStmt($<stmt>2); }
-    ;
-
-stmt : 
-    expr ';' { $$ = new AstExprStmt($1); }
-    | var_decl
-    ;
-
-var_decl :
-    TYPE_INT ident ';' { $$ = new AstVariableDeclaration($2); }
-
-ident : 
-    IDENTIFIER { $$ = new AstIdentifier(*$1); delete $1; }
-    ;
-
-numeric : 
-    INTEGER { $$ = new AstInt(atol($1->c_str())); delete $1; }
-    ;
-
-*/
 
 %%

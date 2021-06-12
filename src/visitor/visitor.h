@@ -22,13 +22,6 @@ public:
     void codegenProgram(AstTranslationUnit* root);
     void configureTarget();
 
-    virtual llvm::Value* codegen(const AstInt& node);
-    virtual llvm::Value* codegen(const AstIdentifier& node);
-    virtual llvm::Value* codegen(const AstAssignment& node);
-    virtual llvm::Value* codegen(const AstExprStmt& node);
-    virtual llvm::Value* codegen(AstVariableDeclaration& node);
-    virtual llvm::Value* codegen(const AstBlock& node);
-
     virtual llvm::Value* codegen(const AstPrimaryExpr& node);
     virtual llvm::Value* codegen(const AstPostfixExpr& node);
     virtual llvm::Value* codegen(const AstUnaryExpr& node);

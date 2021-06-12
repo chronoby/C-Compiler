@@ -375,20 +375,14 @@ public:
     std::string qualifier;
 };
 
-class AstParameterDecl
+class AstAbstractDeclarator
 {
-
+public:
 };
 
-class AstParameterList
-{
-
-};
-
-class AstParameterTypeList
-{
-
-};
+class AstParameterTypeList;
+class AstCompoundStmt;
+class AstParameterTypeList;
 
 class AstDirectDeclarator // : public AstNode
 {
@@ -396,6 +390,7 @@ public:
     enum class DeclaratorType {ID, PR, BR, BR_EMPTY, FUNC_PARAM, FUNC_ID, FUNC_EMPTY};
     DeclaratorType declarator_type;
     std::string id_name;
+    AstParameterTypeList* param_type_list;
 
     AstDirectDeclarator(std::string str, DeclaratorType type): id_name(str), declarator_type(type) {}
     void setType(DeclaratorType type) { this->declarator_type = type; }
@@ -460,8 +455,38 @@ public:
     virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
+class AstParameterDecl
+{
+public:
+    AstDeclSpecifiers* decl_specifiers;
+    AstDeclarator* declarator;
+    AstAbstractDeclarator* abstract_declarator;
+
+    AstParameterDecl(AstDeclSpecifiers* decl_specs, AstDeclarator* decl) : decl_specifiers(decl_specs), declarator(decl), abstract_declarator(nullptr) {}
+    AstParameterDecl(AstDeclSpecifiers* decl_specs, AstAbstractDeclarator* abst_decl) : decl_specifiers(decl_specs), declarator(nullptr), abstract_declarator(abst_decl) {}
+    AstParameterDecl(AstDeclSpecifiers* decl_specs) : decl_specifiers(decl_specs), declarator(nullptr), abstract_declarator(nullptr) {}
+};
+
+class AstParameterList
+{
+public:
+    std::vector<AstParameterDecl*> parameter_list;
+
+    AstParameterList(AstParameterDecl* parameter_decl) { parameter_list.push_back(parameter_decl); }
+    void add_param_decl(AstParameterDecl* parameter_decl) { parameter_list.push_back(parameter_decl); }
+};
+
+class AstParameterTypeList
+{
+public:
+    AstParameterList* param_list;
+    bool isVarArg;
+
+    AstParameterTypeList(AstParameterList* list, bool isVarArg): param_list(list), isVarArg(isVarArg) {};
+};
+
 // create variables here
-class AstDecl : public AstStatement
+class AstDecl  : public AstStatement
 {
 public:
     AstDeclSpecifiers* decl_specifiers;
@@ -473,25 +498,29 @@ public:
     virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
-class AstExprStmt  : public AstNode
+class AstExprStmt //  : public AstNode
 {
 public:
     AstExpr* expr;
     AstExprStmt() : expr(nullptr) {}
     AstExprStmt(AstExpr* e): expr(e) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    // virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
-class AstStmt : public AstNode
+class AstStmt // : public AstNode
 {
 public:
     enum class StmtType {LABELED, COMPOUND, EXPR, SELECT, ITER, JUMP};
 
     StmtType stmt_type;
-    // TO BE FINISHED
+    AstCompoundStmt* compound_stmt;
+    AstExprStmt* expr_stmt;
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    AstStmt(AstCompoundStmt* compound_stmt): compound_stmt(compound_stmt), stmt_type(StmtType::COMPOUND) {}
+    AstStmt(AstExprStmt* expr_stmt): expr_stmt(expr_stmt), stmt_type(StmtType::EXPR) {}
+
+    // virtual llvm::Value* codegen(Visitor& visitor) override;
 };
 
 class AstStmtList : public AstNode
@@ -592,69 +621,4 @@ public:
 };
 
 // ----------------------------------------------------------------
-
-class AstInt : public AstExpression
-{
-public:
-    AstInt(int v) : val(v) { }
-    virtual llvm::Value* codegen(Visitor& visitor) override;
-    int getInt() const { return val; }
-    int val;
-};
-
-class AstIdentifier : public AstExpression
-{
-public:
-    AstIdentifier(std::string n) : name(n) { }
-    virtual llvm::Value* codegen(Visitor& visitor) override;
-    std::string getName() const { return name; }
-// private:
-    std::string name;
-};
-
-class AstAssignment : public AstExpression
-{
-public:
-    AstAssignment(AstIdentifier* id, AstExpression* exp) : lhs(id), rhs(exp) { }
-    virtual llvm::Value* codegen(Visitor& visitor) override;
-    std::string getName() const { return lhs->getName(); }
-    AstExpression* getExpr() const { return rhs; }
-private:
-    AstIdentifier* lhs;
-    AstExpression* rhs;
-    int op;
-};
-
-// class AstExprStmt : public AstStatement
-// {
-// public:
-//     AstExprStmt(AstExpression* exp) : expr(exp) { }
-//     virtual llvm::Value* codegen(Visitor& visitor) override;
-//     AstExpression* getExpr() const { return expr; }
-// private:
-//     AstExpression* expr;
-// };
-
-class AstVariableDeclaration : public AstStatement
-{
-public:
-    AstVariableDeclaration(AstIdentifier* tid) : id(tid) { }
-    virtual llvm::Value* codegen(Visitor& visitor) override;
-    const AstIdentifier* getType() const { return type; }
-    AstIdentifier* getId() const { return id; }
-// private:
-    const AstIdentifier* type;
-    AstIdentifier* id;
-};
-
-class AstBlock : public AstExpression
-{
-public:
-    virtual llvm::Value* codegen(Visitor& visitor) override;
-    std::vector<AstStatement*> getStmtList() const { return stmt_list; }
-    void pushStmt(AstStatement* stmt) { stmt_list.push_back(stmt); }
-//private:
-    std::vector<AstStatement*> stmt_list;
-};
-
 #endif // AST_H_

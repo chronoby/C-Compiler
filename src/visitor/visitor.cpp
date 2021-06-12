@@ -45,6 +45,7 @@ void Visitor::codegenProgram(AstTranslationUnit* root)
     std::string llvm_IR;
     llvm::raw_string_ostream OS(llvm_IR);
     OS << *module;
+    // std::cout << "get this line "<< std::endl;
     OS.flush();
     std::cout << llvm_IR;
 
@@ -457,8 +458,7 @@ llvm::Value* Visitor::codegen(const AstExternDecl& node)
         }
         case (AstExternDecl::DeclType::FUNC):
         {
-            // to be updated when function is added
-            return nullptr;
+            return node.function_definition->codegen(*this);
         }
     }
 }
@@ -579,6 +579,21 @@ llvm::Value* Visitor::codegen(const AstFunctionDef& node)
         case AstDirectDeclarator::DeclaratorType::FUNC_EMPTY:
         {
             func_type = llvm::FunctionType::get(result_type, false);
+            break;
+        }
+        case AstDirectDeclarator::DeclaratorType::FUNC_PARAM:
+        {
+            std::vector<llvm::Type*> param_types;
+            bool isVarArg = direct_declarator->param_type_list->isVarArg;
+            auto parameter_list_node = direct_declarator->param_type_list->param_list;
+            for (auto param_decl : parameter_list_node->parameter_list)
+            {
+                auto type_spec = param_decl->decl_specifiers->type_specs[0];
+                auto type = type_spec->codegen(*this);
+                param_types.push_back(type);
+            }
+            func_type = llvm::FunctionType::get(result_type, param_types, isVarArg);
+            break;
         }
     }
     llvm::Function* function = llvm::Function::Create(func_type, llvm::GlobalValue::ExternalLinkage, direct_declarator->id_name, &*this->module);
@@ -618,68 +633,3 @@ llvm::Value* Visitor::codegen(const AstStmtList& node)
 
 // ------------------------------------------------------------------------------
 
-llvm::Value* Visitor::codegen(const AstInt& node)
-{
-    std::cout << "Creating int" << std::endl;
-    return llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), node.val, true);
-}
-
-llvm::Value* Visitor::codegen(const AstIdentifier& node)
-{
-    auto locals = this->envs.back()->locals;
-    std::cout << "Creating id" << std::endl;
-    std::string name = node.getName();
-    if(locals.find(name) == locals.end())
-    {
-        std::cout << "Undefined variable: " << name << std::endl;
-        return nullptr;
-    }
-    return new llvm::LoadInst(llvm::Type::getInt32Ty(*context), locals[name], "", false, block);
-}
-
-llvm::Value* Visitor::codegen(const AstExprStmt& node)
-{
-    // std::cout << "Creating expression statement" << std::endl;
-    // return node.getExpr()->codegen(*this);
-}
-
-llvm::Value* Visitor::codegen(const AstAssignment& node)
-{
-    std::cout << "Creating assignment" << std::endl;
-    std::string name = node.getName();
-    auto locals = this->envs.back()->locals;
-    if(locals.find(name) == locals.end())
-    {
-        std::cout << "Undefined variable: " << name << std::endl;
-        return nullptr;
-    }
-    return new llvm::StoreInst(node.getExpr()->codegen(*this), locals[name], false, block);
-}
-
-llvm::Value* Visitor::codegen(AstVariableDeclaration& node)
-{
-    std::cout << "Creating variable declaration" << std::endl;
-    auto locals = this->envs.back()->locals;
-    // llvm::AllocaInst* alloc = new llvm::AllocaInst(llvm::Type::getInt32Ty(*context), llvm::getInt32(1), node.id->name.c_str(), block);
-    llvm::AllocaInst* alloc = new llvm::AllocaInst(llvm::Type::getInt32Ty(*context), 0, node.id->name.c_str(), block);
-    // llvm::AllocaInst* alloc = builder->CreateAlloca(llvm::Type::getInt32Ty(*context), nullptr, node.id->name.c_str());
-    locals[node.getId()->getName()] = alloc;
-    return alloc;
-}
-
-llvm::Value* Visitor::codegen(const AstBlock& node)
-{
-    std::cout << "Creating block" << std::endl;
-    llvm::Value* last = nullptr;
-    // std::cout << node.getStmtList().size() << std::endl;
-    // for(auto it = node.getStmtList().begin(); it != node.getStmtList().end(); ++it)
-    // {
-    //     last = (*it)->codegen(*this);
-    // }
-    for(auto it = node.stmt_list.begin(); it != node.stmt_list.end(); ++it)
-    {
-        last = (*it)->codegen(*this);
-    }
-
-    return last;
-}

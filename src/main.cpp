@@ -3,7 +3,6 @@
 
 extern int yyparse();
 extern "C" FILE *yyin;
-extern AstBlock* programBlock;
 extern AstPrimaryExpr* primary;
 extern AstExpr* expre;
 extern AstTranslationUnit* unit;
