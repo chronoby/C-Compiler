@@ -518,7 +518,7 @@ public:
     AstParameterDecl(AstDeclSpecifiers* decl_specs, AstDeclarator* decl) : decl_specifiers(decl_specs), declarator(decl), abstract_declarator(nullptr) {}
     AstParameterDecl(AstDeclSpecifiers* decl_specs, AstAbstractDeclarator* abst_decl) : decl_specifiers(decl_specs), declarator(nullptr), abstract_declarator(abst_decl) {}
     AstParameterDecl(AstDeclSpecifiers* decl_specs) : decl_specifiers(decl_specs), declarator(nullptr), abstract_declarator(nullptr) {}
-}
+};
 
 class AstAbstractDeclarator
 {
