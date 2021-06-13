@@ -27,8 +27,8 @@ Visitor::Visitor()
     context = std::make_unique<llvm::LLVMContext>();
     builder = std::make_unique<llvm::IRBuilder<> >(*context);
     module = std::make_unique<llvm::Module>("main", *context);
-    
-
+    present_function = nullptr;
+    func_params = nullptr;
     // std::vector<llvm::Type*> argTypes;
     // llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*context), argTypes, false);
     // llvm::Function* mainFunction = llvm::Function::Create(ftype, llvm::Function::InternalLinkage, "main", *module);
@@ -58,6 +58,11 @@ void Visitor::configureTarget()
 {
     auto target = llvm::sys::getDefaultTargetTriple();
     module->setTargetTriple(target);
+}
+
+int Visitor::getTmpVarId()
+{
+    return tmp_var_id++;
 }
 
 // --------------------- EXPRESSION -----------------------------
@@ -138,6 +143,17 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
     }
     case AstPrimaryExpr::ExprType::ID:
     {
+        if (this->present_function)
+        {
+            auto param_id_pair = func_params->find(node.identifier_name);
+            if (param_id_pair != func_params->end())
+            {
+                auto id = param_id_pair->second;
+                auto arg = present_function->getArg(id);
+                return arg; // this->builder->CreateLoad(arg);
+            }
+        }
+
         for (int i = this->envs.size() - 1; i >= 0; i--)
         {
             auto env = this->envs[i];
@@ -229,7 +245,10 @@ llvm::Value* Visitor::codegen(const AstPostfixExpr& node)
             {
                 for (auto expr : expr_list->expr_list)
                 {
-                    args.push_back(expr->codegen(*this));
+                    auto arg = expr->codegen(*this);
+                    // auto copied_arg = this->builder->CreateAlloca(arg->getType(), nullptr, std::string("tmp_var_") + std::to_string(this->getTmpVarId()));
+                    // TODO: add type check
+                    args.push_back(arg);
                 }
             }
             return this->builder->CreateCall(func, args);
@@ -712,6 +731,8 @@ llvm::Value* Visitor::codegen(const AstExternDecl& node)
 llvm::Value* Visitor::codegen(const AstFunctionDef& node)
 {
     llvm::Type* result_type = llvm::Type::getInt32Ty(*context);
+    auto new_param = new std::map<std::string, unsigned>();
+
     auto decl_specs = node.decl_specifiers;
     if (decl_specs && decl_specs->type_specs.size() > 0)
     {  
@@ -733,11 +754,22 @@ llvm::Value* Visitor::codegen(const AstFunctionDef& node)
             std::vector<llvm::Type*> param_types;
             bool isVarArg = direct_declarator->param_type_list->isVarArg;
             auto parameter_list_node = direct_declarator->param_type_list->param_list;
+            unsigned para_num = 0;
             for (auto param_decl : parameter_list_node->parameter_list)
             {
                 auto type_spec = param_decl->decl_specifiers->type_specs[0];
                 auto type = type_spec->codegen(*this);
                 param_types.push_back(type);
+                std::string para_name = "";
+                if (param_decl->declarator)
+                {
+                    para_name = param_decl->declarator->direct_declarator->id_name;
+                    new_param->insert({para_name, para_num++});
+                }
+                else
+                {
+                    para_num++;
+                }
             }
             func_type = llvm::FunctionType::get(result_type, param_types, isVarArg);
             break;
@@ -747,10 +779,18 @@ llvm::Value* Visitor::codegen(const AstFunctionDef& node)
     llvm::Function* function = llvm::Function::Create(func_type, llvm::GlobalValue::ExternalLinkage, direct_declarator->id_name, &*this->module);
     llvm::BasicBlock* entry = llvm::BasicBlock::Create(*context, "entry", function, nullptr);
     this->builder->SetInsertPoint(entry);
+    auto old_function = this->present_function;
+    auto old_function_params = this->func_params;
+    this->present_function = function;
+    this->func_params = new_param;
 
     node.compound_stmt->codegen(*this);
     this->envs.back()->functions.insert({direct_declarator->id_name, function});
     this->envs.back()->function_types.insert({direct_declarator->id_name, func_type});
+    this->present_function = old_function;
+    delete this->func_params;
+    this->func_params = old_function_params;
+
     return function;
 }
 

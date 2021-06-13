@@ -56,16 +56,23 @@ public:
     virtual llvm::Value* codegen(const AstStmt& node);
     virtual llvm::Value* codegen(const AstExprStmt& node);
 
+    int getTmpVarId();
+
 
 protected:
     std::unique_ptr<llvm::LLVMContext> context;
     std::unique_ptr<llvm::IRBuilder<> > builder;
     std::unique_ptr<llvm::Module> module;
     
-    llvm::BasicBlock* block;
+    // llvm::BasicBlock* block;
     
     // std::map<std::string, llvm::Value*> locals;
     std::vector<LocalEnv*> envs;
+
+    llvm::Function* present_function;
+    std::map<std::string, unsigned>* func_params;
+
+    int tmp_var_id = 0;
 
 };
 

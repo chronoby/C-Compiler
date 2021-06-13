@@ -54,4 +54,6 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 
 2021-06-12 wyq:
 * 修正了变量调用的方式
-* 增加了函数调用(但函数内部调用参数时有bug，待修改)
+* 增加了函数调用
+// TODO: 声明变量的时候检查参数重名
+// TODO: 退出函数定义时修改insert point
