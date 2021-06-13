@@ -9,6 +9,13 @@ make
 ./compiler
 ```
 
+## Test
+
+```
+bash test.sh
+```
+The last line is the `RETURN` value of main function.
+
 ## Feature
 
 ### Data type

@@ -19,6 +19,7 @@ TYPE_SIGNED "signed"
 TYPE_UNSIGNED   "unsigned"
 VOID        "void"
 SIZEOF      "sizeof"
+RETURN      "return"
 IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
 
 ASSIGN      "="
@@ -51,7 +52,7 @@ DIGIT       [0-9]
 EXP         [Ee][+-]+{DIGIT}+
 INT_S       (u|U|l|L)*
 FLOAT_S     (f|F|l|L)
-INTEGER     [0-9]+{INT_S}?
+INTEGER     (0|[1-9][0-9]*){INT_S}?
 HEXI        (0(x|X))({DIGIT}|[A-Fa-f])+{INT_S}?
 OCTAL       (0[0-7]+){INT_S}?
 FLOAT       (({DIGIT}+{EXP})|({DIGIT}*"."{DIGIT}+({EXP})?)|({DIGIT}+"."{DIGIT}*({EXP})?)){FLOAT_S}?
@@ -71,6 +72,7 @@ STRING      \"(\\.|[^\\"])*\"
 {TYPE_UNSIGNED}             SAVE_TOKEN; return TYPE_UNSIGNED;
 {TYPE_CHAR}                 SAVE_TOKEN; return TYPE_CHAR;
 {SIZEOF}                    return SIZEOF;
+{RETURN}                    return RETURN;
 
 {IDENTIFIER}                SAVE_TOKEN; return IDENTIFIER;
 
@@ -107,7 +109,6 @@ STRING      \"(\\.|[^\\"])*\"
 {LESS}                      return '<';
 {GREATER}                   return '>';
 {ELLIPSIS}                  return ELLIPSIS;
-
 
 .                           printf("Unknown token!n"); yyterminate();
 

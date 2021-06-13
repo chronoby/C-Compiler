@@ -3,10 +3,12 @@ int y = 0 - 4;
 
 int plus(int a, int b)
 {
-    y = 5 + a + 3;
+    return a + b;
 }
 
 int main()
 {
-    plus(x, y);
+    int ans = plus(x, y);
+    
+    return ans;
 }

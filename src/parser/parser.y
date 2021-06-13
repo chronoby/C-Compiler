@@ -49,6 +49,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstParameterDecl* parameter_decl;
     AstParameterList* parameter_list;
     AstArgumentExprList* argument_expr_list;
+    AstJumpStmt* jump_stmt;
 
     std::string* string;
 }
@@ -92,11 +93,13 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type<parameter_decl> parameter_decl;
 %type<parameter_list> parameter_list;
 %type<argument_expr_list> argument_expr_list;
+%type<jump_stmt> jump_stmt;
 
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
 %token PTR_OP INC_OP DEC_OP AND_OP OR_OP EQ_OP NE_OP LE_OP GE_OP ELLIPSIS
 %token SIZEOF
+%token RETURN
 
 %start translation_unit
 %%
@@ -315,10 +318,10 @@ initializer :
 stmt :
     /* labeled_stmt
     |*/ compound_stmt { $$ = new AstStmt($1); }
-    | expr_stmt { $$ = new AstStmt($1); } /*
+    | expr_stmt { $$ = new AstStmt($1); }
+    | jump_stmt { $$ = new AstStmt($1); } /*
     | select_stmt
-    | iter_stmt
-    | jump_stmt */
+    | iter_stmt */
     ;
 
 compound_stmt : 
@@ -343,6 +346,11 @@ expr_stmt :
     | expr ';' { $$ = new AstExprStmt($1); }
     ;
 
+jump_stmt :
+    RETURN ';' { $$ = new AstJumpStmt(AstJumpStmt::StmtType::RETURN); }
+    | RETURN expr ';' { $$ = new AstJumpStmt($2); }
+    ;
+
 translation_unit : 
     external_decl { $$ = new AstTranslationUnit($1); unit = $$; }
     | translation_unit external_decl { unit = $1; unit->add_exdec($2); }
@@ -350,7 +358,7 @@ translation_unit :
 
 external_decl :
     decl { $$ = new AstExternDecl($1);  }
-    | function_def
+    | function_def { $$ = new AstExternDecl($1); }
     ;
 
 function_def :

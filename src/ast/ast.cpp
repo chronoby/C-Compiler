@@ -152,3 +152,8 @@ std::shared_ptr<Variable> AstExprStmt::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
+
+std::shared_ptr<Variable> AstJumpStmt::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}

@@ -229,8 +229,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
                 }
             }
             // std::cerr << "func: " << func << std::endl;
-            this->builder->CreateCall(func);
-            return nullptr;
+            llvm::Value* ret = this->builder->CreateCall(func);
+            return std::make_shared<Variable>(ret, nullptr);
         }
         case AstPostfixExpr::ExprType::FUNC_PARAM:
         {
@@ -265,8 +265,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
                     args.push_back(arg);
                 }
             }
-            this->builder->CreateCall(func, args);
-            return nullptr;
+            llvm::Value* ret = this->builder->CreateCall(func, args);
+            return std::make_shared<Variable>(ret, nullptr);
         }
     }
     return nullptr;
@@ -648,7 +648,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
                     *(this->module),
                     var_type,
                     false,
-                    llvm::GlobalValue::CommonLinkage,
+                    llvm::GlobalValue::ExternalLinkage,
                     initializer_v,
                     var_name
                 );
@@ -695,7 +695,12 @@ std::shared_ptr<Variable> Visitor::codegen(const AstStmt& node)
         return node.expr_stmt->codegen(*this);
         break;
     
+    case AstStmt::StmtType::JUMP:
+        return node.jump_stmt->codegen(*this);
+        break;
+
     default:
+        return nullptr;
         break;
     }
 }
@@ -840,5 +845,27 @@ std::shared_ptr<Variable> Visitor::codegen(const AstExprStmt& node)
     return node.expr->codegen(*this);
 }
 
+std::shared_ptr<Variable> Visitor::codegen(const AstJumpStmt& node)
+{
+    switch (node.stmt_type)
+    {
+    case AstJumpStmt::StmtType::RETURN:
+    {
+        this->builder->CreateRetVoid();
+        break;
+    }
+    case AstJumpStmt::StmtType::RETURN_VALUE:
+    {
+        llvm::Value* ret = node.expr->codegen(*this)->value;
+        this->builder->CreateRet(ret);
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
+    return nullptr;
+}
 // ------------------------------------------------------------------------------
 

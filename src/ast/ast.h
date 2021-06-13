@@ -57,6 +57,7 @@ class AstCompoundStmt;
 class AstDeclList;
 class AstStmtList;
 class AstExprStmt;
+class AstJumpStmt;
 class AstTranslationUnit;
 class AstExternDecl;
 class AstFunctionDef;
@@ -549,9 +550,11 @@ public:
     StmtType stmt_type;
     AstCompoundStmt* compound_stmt;
     AstExprStmt* expr_stmt;
+    AstJumpStmt* jump_stmt;
 
     AstStmt(AstCompoundStmt* compound_stmt): compound_stmt(compound_stmt), stmt_type(StmtType::COMPOUND) {}
     AstStmt(AstExprStmt* expr_stmt): expr_stmt(expr_stmt), stmt_type(StmtType::EXPR) {}
+    AstStmt(AstJumpStmt* jump_stmt): jump_stmt(jump_stmt), stmt_type(StmtType::JUMP) {}
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
@@ -598,6 +601,19 @@ public:
     AstExpr* expr;
     AstExprStmt() : expr(nullptr) {}
     AstExprStmt(AstExpr* e): expr(e) {}
+
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
+};
+
+class AstJumpStmt : public AstNode
+{
+public:
+    enum class StmtType {RETURN, RETURN_VALUE};
+    StmtType stmt_type;
+    AstExpr* expr;
+
+    AstJumpStmt(StmtType t): stmt_type(t) {}
+    AstJumpStmt(AstExpr* expr): stmt_type(StmtType::RETURN_VALUE), expr(expr) {}
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
