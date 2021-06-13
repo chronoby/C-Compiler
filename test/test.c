@@ -1,14 +1,12 @@
-int x = 12;
-double y = 5.;
+int x = 12 + 6 * 5 - 4; 
+int y = 0 - 4;
 
 int plus(int a, int b)
 {
-    int c = b;
-    b = 3;
-    c = c + 2;
+    y = 5 + a + 3;
 }
 
 int main()
 {
-
+    plus(x, y);
 }

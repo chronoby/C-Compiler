@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Host.h"
@@ -49,6 +50,10 @@ void Visitor::codegenProgram(AstTranslationUnit* root)
     OS.flush();
     std::cout << llvm_IR;
 
+    std::ofstream outfile("out.ll");
+    outfile << llvm_IR;
+    outfile.close();
+
     // llvm::PassManager pm;
     // pm.add(createPrintModulePass(&outs()));
     // pm.run(*module);
@@ -67,10 +72,13 @@ int Visitor::getTmpVarId()
 
 // --------------------- EXPRESSION -----------------------------
 
-llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
 {
     // TO BE FINISHED
     std::cout << "Creating primary expr" << node.value << std::endl;
+    llvm::Value* value = nullptr;
+    llvm::Value* addr = nullptr;
+    
     switch (node.expr_type)
     {
     case AstPrimaryExpr::ExprType::CONSTANT:
@@ -80,37 +88,37 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
         case AstPrimaryExpr::DataType::INTEGER:
         {
             int val = strtol(node.value.c_str(), nullptr, 10);
-            return llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
+            value = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
             break;
         }
         case AstPrimaryExpr::DataType::OCTAL:
         {
             int val = strtol(node.value.c_str(), nullptr, 8);
-            return llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
+            value = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
             break;
         }
         case AstPrimaryExpr::DataType::HEXI:
         {
             int val = strtol(node.value.c_str(), nullptr, 16);
-            return llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
+            value = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), val, true);
             break;
         }
         case AstPrimaryExpr::DataType::FLOAT:
         {
             double val = strtod(node.value.c_str(), nullptr);
-            return llvm::ConstantFP::get(llvm::Type::getDoubleTy(*context), val);
+            value = llvm::ConstantFP::get(llvm::Type::getDoubleTy(*context), val);
             break;
         }
         case AstPrimaryExpr::DataType::CHAR:
         {
             if (node.value.length() == 0)
             {
-                return llvm::ConstantInt::get(llvm::Type::getInt8Ty(*context), 0, true);
+                value = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*context), 0, true);
             }
             else
             {
                 char val = node.value[1];
-                return llvm::ConstantInt::get(llvm::Type::getInt8Ty(*context), val, true);
+                value = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*context), val, true);
             }
             break;
         }
@@ -131,7 +139,7 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
             llvm::Value* str_mem = this->builder->CreateGlobalStringPtr(str_content, "", 0, &*this->module);
             // llvm::Value* str_load = this->builder->CreateLoad(str_mem);
             // std::cout << str_mem << std::endl;
-            return str_mem;
+            addr =  str_mem;
             break;
         }
         default:
@@ -140,6 +148,7 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
             return nullptr;
         }
         }
+        return std::make_shared<Variable>(value, addr);
     }
     case AstPrimaryExpr::ExprType::ID:
     {
@@ -150,7 +159,9 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
             {
                 auto id = param_id_pair->second;
                 auto arg = present_function->getArg(id);
-                return arg; // this->builder->CreateLoad(arg);
+                value = arg;
+                return std::make_shared<Variable>(value, addr);
+                // return this->builder->CreateLoad(arg->getType(), arg);
             }
         }
 
@@ -160,8 +171,10 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
             auto pair = env->locals.find(node.identifier_name);
             if (pair != env->locals.end())
             {
-                auto var = pair->second;
-                return this->builder->CreateLoad(var);
+                addr = pair->second;
+                value = this->builder->CreateLoad(addr);
+                return std::make_shared<Variable>(value, addr);
+                // return this->builder->CreateLoad(var);
             }
             if (i == 0)
             {
@@ -182,7 +195,7 @@ llvm::Value* Visitor::codegen(const AstPrimaryExpr& node)
     }
 }
 
-llvm::Value* Visitor::codegen(const AstPostfixExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
 {
     switch (node.expr_type)
     {
@@ -216,7 +229,8 @@ llvm::Value* Visitor::codegen(const AstPostfixExpr& node)
                 }
             }
             // std::cerr << "func: " << func << std::endl;
-            return this->builder->CreateCall(func);
+            this->builder->CreateCall(func);
+            return nullptr;
         }
         case AstPostfixExpr::ExprType::FUNC_PARAM:
         {
@@ -245,19 +259,20 @@ llvm::Value* Visitor::codegen(const AstPostfixExpr& node)
             {
                 for (auto expr : expr_list->expr_list)
                 {
-                    auto arg = expr->codegen(*this);
+                    auto arg = expr->codegen(*this)->value;
                     // auto copied_arg = this->builder->CreateAlloca(arg->getType(), nullptr, std::string("tmp_var_") + std::to_string(this->getTmpVarId()));
                     // TODO: add type check
                     args.push_back(arg);
                 }
             }
-            return this->builder->CreateCall(func, args);
+            this->builder->CreateCall(func, args);
+            return nullptr;
         }
     }
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstUnaryExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstUnaryExpr& node)
 {
     switch (node.expr_type)
     {
@@ -269,7 +284,7 @@ llvm::Value* Visitor::codegen(const AstUnaryExpr& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstCastExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstCastExpr& node)
 {
     switch (node.expr_type)
     {
@@ -281,7 +296,7 @@ llvm::Value* Visitor::codegen(const AstCastExpr& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstMultiplicativeExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstMultiplicativeExpr& node)
 {
     switch (node.expr_type)
     {
@@ -291,29 +306,34 @@ llvm::Value* Visitor::codegen(const AstMultiplicativeExpr& node)
         }
         case AstMultiplicativeExpr::ExprType::OP:
         {
+            llvm::Value* res;
             switch (node.op_type)
             {
                 case AstMultiplicativeExpr::OpType::MUL:
                 {
-                    return this->builder->CreateMul(node.multi_expr->codegen(*this), node.cast_expr->codegen(*this), "mul");
+                    res = this->builder->CreateMul(node.multi_expr->codegen(*this)->value, node.cast_expr->codegen(*this)->value, "mul");
+                    break;
                 }
                 case AstMultiplicativeExpr::OpType::DIV:
                 {
                     // only for signed int
                     // to support double, add CreateFDiv. but how to get type?
-                    return this->builder->CreateSDiv(node.multi_expr->codegen(*this), node.cast_expr->codegen(*this), "div");
+                    res = this->builder->CreateSDiv(node.multi_expr->codegen(*this)->value, node.cast_expr->codegen(*this)->value, "div");
+                    break;
                 }
                 case AstMultiplicativeExpr::OpType::MOD:
                 {
-                    return this->builder->CreateSRem(node.multi_expr->codegen(*this), node.cast_expr->codegen(*this), "ram");
+                    res = this->builder->CreateSRem(node.multi_expr->codegen(*this)->value, node.cast_expr->codegen(*this)->value, "ram");
+                    break;
                 }
             }
+            return std::make_shared<Variable>(res, nullptr);
         }
     }
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstAdditiveExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
 {
     switch (node.expr_type)
     {
@@ -323,23 +343,27 @@ llvm::Value* Visitor::codegen(const AstAdditiveExpr& node)
         }
         case AstAdditiveExpr::ExprType::OP:
         {
+            llvm::Value* res;
             switch (node.op_type)
             {
                 case AstAdditiveExpr::OpType::PLUS:
                 {
-                    return this->builder->CreateAdd(node.add_expr->codegen(*this), node.multi_expr->codegen(*this), "add");
+                    res = this->builder->CreateAdd(node.add_expr->codegen(*this)->value, node.multi_expr->codegen(*this)->value, "add");
+                    break;
                 }
                 case AstAdditiveExpr::OpType::MINUS:
                 {
-                    return this->builder->CreateSub(node.add_expr->codegen(*this), node.multi_expr->codegen(*this), "sub");
+                    res = this->builder->CreateSub(node.add_expr->codegen(*this)->value, node.multi_expr->codegen(*this)->value, "sub");
+                    break;
                 }
             }
+            return std::make_shared<Variable>(res, nullptr);
         }
     }
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstShiftExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstShiftExpr& node)
 {
     switch (node.expr_type)
     {
@@ -351,7 +375,7 @@ llvm::Value* Visitor::codegen(const AstShiftExpr& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstRelationalExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstRelationalExpr& node)
 {
     switch (node.expr_type)
     {
@@ -361,31 +385,37 @@ llvm::Value* Visitor::codegen(const AstRelationalExpr& node)
         }
         case AstRelationalExpr::ExprType::OP:
         {
+            llvm::Value* res;
             switch (node.op_type)
             {
                 case AstRelationalExpr::OpType::GREATER:
                 {
-                    return builder->CreateICmpSGT(node.rela_expr->codegen(*this), node.shift_expr->codegen(*this), "gt");
+                    res =  builder->CreateICmpSGT(node.rela_expr->codegen(*this)->value, node.shift_expr->codegen(*this)->value, "gt");
+                    break;
                 }
                 case AstRelationalExpr::OpType::LESS:
                 {
-                    return builder->CreateICmpSLT(node.rela_expr->codegen(*this), node.shift_expr->codegen(*this), "lt");
+                    res =  builder->CreateICmpSLT(node.rela_expr->codegen(*this)->value, node.shift_expr->codegen(*this)->value, "lt");
+                    break;
                 }
                 case AstRelationalExpr::OpType::GE:
                 {
-                    return builder->CreateICmpSGE(node.rela_expr->codegen(*this), node.shift_expr->codegen(*this), "gte");
+                    res =  builder->CreateICmpSGE(node.rela_expr->codegen(*this)->value, node.shift_expr->codegen(*this)->value, "gte");
+                    break;
                 }
                 case AstRelationalExpr::OpType::LE:
                 {
-                    return builder->CreateICmpSLE(node.rela_expr->codegen(*this), node.shift_expr->codegen(*this), "lte");
+                    res =  builder->CreateICmpSLE(node.rela_expr->codegen(*this)->value, node.shift_expr->codegen(*this)->value, "lte");
+                    break;
                 }
             }
+            return std::make_shared<Variable>(res, nullptr);
         }
     }
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstEqualityExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstEqualityExpr& node)
 {
     switch (node.expr_type)
     {
@@ -399,11 +429,13 @@ llvm::Value* Visitor::codegen(const AstEqualityExpr& node)
             {
                 case AstEqualityExpr::OpType::EQ:
                 {
-                    return builder->CreateICmpEQ(node.equal_expr->codegen(*this), node.rela_expr->codegen(*this), "eq");
+                    llvm::Value* res =  builder->CreateICmpEQ(node.equal_expr->codegen(*this)->value, node.rela_expr->codegen(*this)->value, "eq");
+                    return std::make_shared<Variable>(res, nullptr);
                 }            
                 case AstEqualityExpr::OpType::NE:
                 {
-                    return builder->CreateICmpNE(node.equal_expr->codegen(*this), node.rela_expr->codegen(*this), "ne");
+                    llvm::Value* res =  builder->CreateICmpNE(node.equal_expr->codegen(*this)->value, node.rela_expr->codegen(*this)->value, "ne");
+                    return std::make_shared<Variable>(res, nullptr);
                 }
             }
         }
@@ -411,7 +443,7 @@ llvm::Value* Visitor::codegen(const AstEqualityExpr& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstAndExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstAndExpr& node)
 {
     switch (node.expr_type)
     {
@@ -423,7 +455,7 @@ llvm::Value* Visitor::codegen(const AstAndExpr& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstExclusiveExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstExclusiveExpr& node)
 {
     switch (node.expr_type)
     {
@@ -435,7 +467,7 @@ llvm::Value* Visitor::codegen(const AstExclusiveExpr& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstInclusiveExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstInclusiveExpr& node)
 {
     switch (node.expr_type)
     {
@@ -447,7 +479,7 @@ llvm::Value* Visitor::codegen(const AstInclusiveExpr& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstLogicalAndExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstLogicalAndExpr& node)
 {
     switch (node.expr_type)
     {
@@ -457,13 +489,14 @@ llvm::Value* Visitor::codegen(const AstLogicalAndExpr& node)
         }
         case AstLogicalAndExpr::ExprType::OP:
         {
-            return builder->CreateLogicalAnd(node.and_expr->codegen(*this), node.inclusive_expr->codegen(*this), "logical_and");
+            llvm::Value* res = builder->CreateLogicalAnd(node.and_expr->codegen(*this)->value, node.inclusive_expr->codegen(*this)->value, "logical_and");
+            return std::make_shared<Variable>(res, nullptr);
         }
     }
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstLogicalOrExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstLogicalOrExpr& node)
 {
     switch (node.expr_type)
     {
@@ -473,13 +506,14 @@ llvm::Value* Visitor::codegen(const AstLogicalOrExpr& node)
         }
         case AstLogicalOrExpr::ExprType::OP:
         {
-            return builder->CreateLogicalOr(node.or_expr->codegen(*this), node.and_expr->codegen(*this), "logical_or");
+            llvm::Value* res = builder->CreateLogicalOr(node.or_expr->codegen(*this)->value, node.and_expr->codegen(*this)->value, "logical_or");
+            return std::make_shared<Variable>(res, nullptr);
         }
     }
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstConditionalExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstConditionalExpr& node)
 {
     switch (node.expr_type)
     {
@@ -491,7 +525,7 @@ llvm::Value* Visitor::codegen(const AstConditionalExpr& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstAssignmentExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstAssignmentExpr& node)
 {
     switch (node.expr_type)
     {
@@ -503,13 +537,15 @@ llvm::Value* Visitor::codegen(const AstAssignmentExpr& node)
         {
             // need update
             // return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
-            return this->builder->CreateStore(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false);
+            
+            this->builder->CreateStore(node.assign_expr->codegen(*this)->value, node.unary_expr->codegen(*this)->addr, false);
+            return std::make_shared<Variable>(node.assign_expr->codegen(*this)->value, nullptr);
         }
     }
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstExpr& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstExpr& node)
 {
     switch (node.expr_type)
     {
@@ -559,7 +595,7 @@ llvm::Type* Visitor::codegen(const AstTypeSpecifier& node)
     }
 }
 
-llvm::Value* Visitor::codegen(const AstDecl& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
 {
     if (!node.decl_specifiers || node.decl_specifiers->type_specs.size() != 1)
     {
@@ -573,6 +609,7 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
         return nullptr;
     }
     auto init_declarators = node.init_declarator_list->init_declarators;
+
     for (auto init_declarator : init_declarators)
     {
         auto declarator = init_declarator->declarator;
@@ -583,12 +620,12 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
             std::string var_name = declarator->direct_declarator->id_name;
             auto var_type = type_spec->codegen(*this);
             llvm::Constant* initializer_v = llvm::ConstantAggregateZero::get(var_type);
-
             if (envs.size() == 1)
             {
                 if (initializer)
                 {
-                    auto initializer_value = initializer->codegen(*this);
+                    auto initializer_value = initializer->codegen(*this)->value;
+                      
                     if (llvm::isa<llvm::Constant>(initializer_value))
                     {
                         initializer_v = llvm::cast<llvm::Constant>(initializer_value);
@@ -599,7 +636,7 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
                         std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
                     }
                 }
-
+                
                 LocalEnv* present_env = envs[0];
                 if (present_env->locals.find(var_name) != present_env->locals.end())
                 {
@@ -617,7 +654,8 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
                 );
                 
                 present_env->locals.insert({var_name, var});
-                return var;
+                
+                return std::make_shared<Variable>(nullptr, var);
             }
             else
             {
@@ -632,23 +670,24 @@ llvm::Value* Visitor::codegen(const AstDecl& node)
 
                 if (initializer)
                 {
-                    auto initializer_value = initializer->codegen(*this);
+                    auto initializer_value = initializer->codegen(*this)->value;
                     llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
                 }
 
                 present_env->locals.insert({var_name, var});
+                return std::make_shared<Variable>(nullptr, var);
             }
         }
     }
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstInitializer& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstInitializer& node)
 {
     return node.assignment_expr->codegen(*this);
 }
 
-llvm::Value* Visitor::codegen(const AstStmt& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstStmt& node)
 {
     switch (node.stmt_type)
     {
@@ -661,7 +700,7 @@ llvm::Value* Visitor::codegen(const AstStmt& node)
     }
 }
 
-llvm::Value* Visitor::codegen(const AstCompoundStmt& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstCompoundStmt& node)
 {
     auto env = new LocalEnv();
     this->envs.push_back(env);
@@ -680,7 +719,7 @@ llvm::Value* Visitor::codegen(const AstCompoundStmt& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstDeclList& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstDeclList& node)
 {
     for (auto decl : node.decls)
     {
@@ -692,7 +731,7 @@ llvm::Value* Visitor::codegen(const AstDeclList& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstStmtList& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstStmtList& node)
 {
     for (auto stmt : node.stmts)
     {
@@ -704,7 +743,7 @@ llvm::Value* Visitor::codegen(const AstStmtList& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstTranslationUnit& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstTranslationUnit& node)
 {
     for (auto i : node.external_decl_list)
     {
@@ -713,7 +752,7 @@ llvm::Value* Visitor::codegen(const AstTranslationUnit& node)
     return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstExternDecl& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstExternDecl& node)
 {
     switch(node.decl_type)
     {
@@ -728,7 +767,7 @@ llvm::Value* Visitor::codegen(const AstExternDecl& node)
     }
 }
 
-llvm::Value* Visitor::codegen(const AstFunctionDef& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstFunctionDef& node)
 {
     llvm::Type* result_type = llvm::Type::getInt32Ty(*context);
     auto new_param = new std::map<std::string, unsigned>();
@@ -778,6 +817,7 @@ llvm::Value* Visitor::codegen(const AstFunctionDef& node)
     
     llvm::Function* function = llvm::Function::Create(func_type, llvm::GlobalValue::ExternalLinkage, direct_declarator->id_name, &*this->module);
     llvm::BasicBlock* entry = llvm::BasicBlock::Create(*context, "entry", function, nullptr);
+    llvm::BasicBlock* oldBlock = this->builder->GetInsertBlock();
     this->builder->SetInsertPoint(entry);
     auto old_function = this->present_function;
     auto old_function_params = this->func_params;
@@ -790,11 +830,12 @@ llvm::Value* Visitor::codegen(const AstFunctionDef& node)
     this->present_function = old_function;
     delete this->func_params;
     this->func_params = old_function_params;
+    this->builder->SetInsertPoint(oldBlock);
 
-    return function;
+    return nullptr;
 }
 
-llvm::Value* Visitor::codegen(const AstExprStmt& node)
+std::shared_ptr<Variable> Visitor::codegen(const AstExprStmt& node)
 {
     return node.expr->codegen(*this);
 }

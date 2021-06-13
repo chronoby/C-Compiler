@@ -3,99 +3,99 @@
 
 // --------------------------- expression -------------------------
 
-llvm::Value* AstPrimaryExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstPrimaryExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstPostfixExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstPostfixExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstUnaryExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstUnaryExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstCastExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstCastExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstMultiplicativeExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstMultiplicativeExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstAdditiveExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstAdditiveExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstShiftExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstShiftExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstRelationalExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstRelationalExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstEqualityExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstEqualityExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstAndExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstAndExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstExclusiveExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstExclusiveExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstInclusiveExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstInclusiveExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstLogicalAndExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstLogicalAndExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstLogicalOrExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstLogicalOrExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstConditionalExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstConditionalExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstAssignmentExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstAssignmentExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstExpr::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstExpr::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
 // ---------------------- DECLRATION -----------------------------
 
-llvm::Value* AstExternDecl::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstExternDecl::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstDecl::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstDecl::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
@@ -105,50 +105,50 @@ llvm::Type* AstTypeSpecifier::codegen(Visitor& visitor)
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstDeclSpecifiers::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstDeclSpecifiers::codegen(Visitor& visitor)
 {
     // do nothing, temporarily
     return nullptr;
 }
 
-llvm::Value* AstInitializer::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstInitializer::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstStmt::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstStmt::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstCompoundStmt::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstCompoundStmt::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstTranslationUnit::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstTranslationUnit::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstFunctionDef::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstFunctionDef::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstStmtList::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstStmtList::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
-llvm::Value* AstDeclList::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstDeclList::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }
 
 // ----------------------------------------------------------------
 
-llvm::Value* AstExprStmt::codegen(Visitor& visitor)
+std::shared_ptr<Variable> AstExprStmt::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);
 }

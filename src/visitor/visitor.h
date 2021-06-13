@@ -9,6 +9,15 @@
 #include "llvm/IR/BasicBlock.h"
 #include "../ast/ast.h"
 
+class Variable
+{
+public:
+    llvm::Value* value;
+    llvm::Value* addr;
+
+    Variable(llvm::Value* value, llvm::Value* addr): value(value), addr(addr) {}
+};
+
 class LocalEnv
 {
 public:
@@ -24,37 +33,37 @@ public:
     void codegenProgram(AstTranslationUnit* root);
     void configureTarget();
 
-    virtual llvm::Value* codegen(const AstPrimaryExpr& node);
-    virtual llvm::Value* codegen(const AstPostfixExpr& node);
-    virtual llvm::Value* codegen(const AstUnaryExpr& node);
-    virtual llvm::Value* codegen(const AstCastExpr& node);
-    virtual llvm::Value* codegen(const AstMultiplicativeExpr& node);
-    virtual llvm::Value* codegen(const AstAdditiveExpr& node);
-    virtual llvm::Value* codegen(const AstShiftExpr& node);
-    virtual llvm::Value* codegen(const AstRelationalExpr& node);
-    virtual llvm::Value* codegen(const AstEqualityExpr& node);
-    virtual llvm::Value* codegen(const AstAndExpr& node);
-    virtual llvm::Value* codegen(const AstExclusiveExpr& node);
-    virtual llvm::Value* codegen(const AstInclusiveExpr& node);
-    virtual llvm::Value* codegen(const AstLogicalAndExpr& node);
-    virtual llvm::Value* codegen(const AstLogicalOrExpr& node);
-    virtual llvm::Value* codegen(const AstConditionalExpr& node);
-    virtual llvm::Value* codegen(const AstAssignmentExpr& node);
-    virtual llvm::Value* codegen(const AstExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstPrimaryExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstPostfixExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstUnaryExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstCastExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstMultiplicativeExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstAdditiveExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstShiftExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstRelationalExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstEqualityExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstAndExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstExclusiveExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstInclusiveExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstLogicalAndExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstLogicalOrExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstConditionalExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstAssignmentExpr& node);
+    virtual std::shared_ptr<Variable> codegen(const AstExpr& node);
 
-    virtual llvm::Value* codegen(const AstExternDecl& node);
-    virtual llvm::Value* codegen(const AstDecl& node);
+    virtual std::shared_ptr<Variable> codegen(const AstExternDecl& node);
+    virtual std::shared_ptr<Variable> codegen(const AstDecl& node);
     llvm::Type* codegen(const AstTypeSpecifier& node);
-    virtual llvm::Value* codegen(const AstInitializer& node);
-    virtual llvm::Value* codegen(const AstTranslationUnit& node);
-    virtual llvm::Value* codegen(const AstFunctionDef& node);
+    virtual std::shared_ptr<Variable> codegen(const AstInitializer& node);
+    virtual std::shared_ptr<Variable> codegen(const AstTranslationUnit& node);
+    virtual std::shared_ptr<Variable> codegen(const AstFunctionDef& node);
 
-    virtual llvm::Value* codegen(const AstCompoundStmt& node);
-    virtual llvm::Value* codegen(const AstDeclList& node);
-    virtual llvm::Value* codegen(const AstStmtList& node);
+    virtual std::shared_ptr<Variable> codegen(const AstCompoundStmt& node);
+    virtual std::shared_ptr<Variable> codegen(const AstDeclList& node);
+    virtual std::shared_ptr<Variable> codegen(const AstStmtList& node);
 
-    virtual llvm::Value* codegen(const AstStmt& node);
-    virtual llvm::Value* codegen(const AstExprStmt& node);
+    virtual std::shared_ptr<Variable> codegen(const AstStmt& node);
+    virtual std::shared_ptr<Variable> codegen(const AstExprStmt& node);
 
     int getTmpVarId();
 
@@ -73,7 +82,6 @@ protected:
     std::map<std::string, unsigned>* func_params;
 
     int tmp_var_id = 0;
-
 };
 
 #endif // VISITOR_H_

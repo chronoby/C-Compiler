@@ -8,11 +8,12 @@
 #include <llvm/IR/Value.h>
 
 class Visitor;
+class Variable;
 
 class AstNode
 {
 public:
-    virtual llvm::Value* codegen(Visitor& visitor) = 0;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) = 0;
 };
 
 class AstExpression : public AstNode { };
@@ -84,7 +85,7 @@ public:
     AstPrimaryExpr(std::string name): identifier_name(name), expr_type(AstPrimaryExpr::ExprType::ID) {}
     AstPrimaryExpr(AstExpr* expr): expr(expr), value(""), expr_type(AstPrimaryExpr::ExprType::PR_EXPR) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 // private:
     // which grammar rule is used to derive this node
     ExprType expr_type;
@@ -117,7 +118,7 @@ public:
     // AstPostfixExpr(AstPostfixExpr* expr, ExprType expr_type): postfix_expr(expr), expr_type(expr_type) {}
     void setExprType(ExprType expr_type) { this->expr_type = expr_type; }
     void setOpType(OpType op_type) { this->op_type = op_type; }
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 // private:
     // which grammar rule is used to derive this node
     ExprType expr_type;
@@ -142,7 +143,7 @@ public:
 
     AstUnaryExpr(AstPostfixExpr* expr): postfix_expr(expr), expr_type(ExprType::POSTFIX) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 
 // private:
     AstPostfixExpr* postfix_expr;
@@ -158,7 +159,7 @@ public:
 
     AstCastExpr(AstUnaryExpr* expr): unary_expr(expr), expr_type(ExprType::UNARY) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstUnaryExpr* unary_expr;
@@ -175,7 +176,7 @@ public:
     AstMultiplicativeExpr(AstMultiplicativeExpr* m_expr, OpType op, AstCastExpr* expr): 
         multi_expr(m_expr), op_type(op), cast_expr(expr), expr_type(ExprType::OP) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     OpType op_type;
@@ -193,7 +194,7 @@ public:
     AstAdditiveExpr(AstAdditiveExpr* a_expr, OpType op, AstMultiplicativeExpr* expr): 
         add_expr(a_expr), op_type(op), multi_expr(expr), expr_type(ExprType::OP) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     OpType op_type;
@@ -209,7 +210,7 @@ public:
 
     AstShiftExpr(AstAdditiveExpr* expr): add_expr(expr), expr_type(ExprType::ADD) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstAdditiveExpr* add_expr;
@@ -225,7 +226,7 @@ public:
     AstRelationalExpr(AstRelationalExpr* r_expr, OpType op, AstShiftExpr* expr): 
         rela_expr(r_expr), op_type(op), shift_expr(expr), expr_type(ExprType::OP) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     OpType op_type;
@@ -243,7 +244,7 @@ public:
     AstEqualityExpr(AstEqualityExpr* e_expr, OpType op, AstRelationalExpr* expr): 
         equal_expr(e_expr), op_type(op), rela_expr(expr), expr_type(ExprType::OP) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     OpType op_type;
@@ -258,7 +259,7 @@ public:
 
     AstAndExpr(AstEqualityExpr* expr): equal_expr(expr), expr_type(ExprType::EQUALITY) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstEqualityExpr* equal_expr;
@@ -271,7 +272,7 @@ public:
 
     AstExclusiveExpr(AstAndExpr* expr): and_expr(expr), expr_type(ExprType::AND) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstAndExpr* and_expr;
@@ -283,7 +284,7 @@ public:
     enum class ExprType {EXCLUSIVE, OP};
     AstInclusiveExpr(AstExclusiveExpr* expr): exclusive_expr(expr), expr_type(ExprType::EXCLUSIVE) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstExclusiveExpr* exclusive_expr;
@@ -297,7 +298,7 @@ public:
     AstLogicalAndExpr(AstLogicalAndExpr* a_expr, AstInclusiveExpr* expr): 
         and_expr(a_expr), inclusive_expr(expr), expr_type(ExprType::OP) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstInclusiveExpr* inclusive_expr;
@@ -313,7 +314,7 @@ public:
     AstLogicalOrExpr(AstLogicalOrExpr* o_expr, AstLogicalAndExpr* expr): 
         or_expr(o_expr), and_expr(expr), expr_type(ExprType::OP) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstLogicalAndExpr* and_expr;
@@ -327,7 +328,7 @@ public:
 
     AstConditionalExpr(AstLogicalOrExpr* expr): or_expr(expr), expr_type(ExprType::LOG_OR) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstLogicalOrExpr* or_expr;
@@ -342,7 +343,7 @@ public:
     AstAssignmentExpr(AstUnaryExpr* expr, AstAssignmentExpr* a_expr): unary_expr(expr), assign_expr(a_expr),
         expr_type(ExprType::ASSIGN) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstConditionalExpr* cond_expr;
@@ -357,7 +358,7 @@ public:
 
     AstExpr(AstAssignmentExpr* expr): assign_expr(expr), expr_type(ExprType::ASSIGN) { }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
     AstAssignmentExpr* assign_expr;
@@ -375,7 +376,7 @@ public:
     AstDecl(AstDeclSpecifiers* decl_spec) : decl_specifiers(decl_spec), init_declarator_list(nullptr) {}
     AstDecl(AstDeclSpecifiers* decl_spec, AstInitDeclaratorList* init_decl_list): decl_specifiers(decl_spec), init_declarator_list(init_decl_list) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
 class AstDeclSpecifiers : public AstNode
@@ -393,7 +394,7 @@ public:
     void add_type_spec(AstTypeSpecifier* type_spec) { this->type_specs.push_back(type_spec); }
     void add_type_qual(AstTypeQualifier* type_qual) { this->type_quals.push_back(type_qual); }
     
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
 class AstInitDeclaratorList // : public AstNode
@@ -537,7 +538,7 @@ public:
 
     AstInitializer(AstAssignmentExpr* expr): assignment_expr(expr) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;    
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;    
 };
 
 class AstStmt : public AstNode
@@ -552,7 +553,7 @@ public:
     AstStmt(AstCompoundStmt* compound_stmt): compound_stmt(compound_stmt), stmt_type(StmtType::COMPOUND) {}
     AstStmt(AstExprStmt* expr_stmt): expr_stmt(expr_stmt), stmt_type(StmtType::EXPR) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
 class AstCompoundStmt : public AstStatement
@@ -566,7 +567,7 @@ public:
     AstCompoundStmt(AstDeclList* decl_l) : stmt_list(nullptr), decl_list(decl_l) {}
     AstCompoundStmt(AstDeclList* decl_l, AstStmtList* stmt_l) : stmt_list(stmt_l), decl_list(decl_l) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor);
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor);
 };
 
 class AstDeclList: public AstNode
@@ -577,7 +578,7 @@ public:
     AstDeclList(AstDecl* decl) { decls.push_back(decl); }
     void add_decl(AstDecl* decl) { decls.push_back(decl); }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
 class AstStmtList : public AstNode
@@ -588,7 +589,7 @@ public:
     AstStmtList(AstStmt* stmt) { stmts.push_back(stmt); }
     void add_stmt(AstStmt* stmt) { stmts.push_back(stmt); }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
 class AstExprStmt  : public AstNode
@@ -598,7 +599,7 @@ public:
     AstExprStmt() : expr(nullptr) {}
     AstExprStmt(AstExpr* e): expr(e) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
 class AstTranslationUnit : public AstNode
@@ -609,7 +610,7 @@ public:
     AstTranslationUnit(AstExternDecl* exdec) { external_decl_list.push_back(exdec); }
     void add_exdec(AstExternDecl* exdec) { external_decl_list.push_back(exdec); }
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
 class AstExternDecl : public AstStatement
@@ -624,7 +625,7 @@ public:
     AstExternDecl(AstDecl* decl) : declaration(decl), decl_type(DeclType::VAR) {};
     AstExternDecl(AstFunctionDef* function_def) : function_definition(function_def), decl_type(DeclType::FUNC) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor) override;
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
 class AstFunctionDef : public AstStatement
@@ -659,7 +660,7 @@ public:
         decl_list(nullptr),
         compound_stmt(stmt) {}
 
-    virtual llvm::Value* codegen(Visitor& visitor) override; 
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override; 
 };
 
 // ----------------------------------------------------------------
