@@ -816,19 +816,22 @@ std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
 
 std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
 {
-    auto cond = node.expr->codegen(*this)->value;
-    if(!cond)
-    {
-        return nullptr;
-    }
     if(node.stmt_type == AstIterStmt::StmtType::WHILE)
     {
         llvm::Function* parent_function = builder->GetInsertBlock()->getParent();
-
-        llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*context, "then", parent_function);
-        llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*context, "ifcont");
-
-        builder->CreateCondBr(cond, true_block, merge_block);
+        llvm::BasicBlock *pre_block = builder->GetInsertBlock();
+        llvm::BasicBlock* loop_block = llvm::BasicBlock::Create(*context, "loop", parent_function);
+        llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*context, "loopin", parent_function);
+        llvm::BasicBlock* cont_block = llvm::BasicBlock::Create(*context, "loopcont");
+        builder->CreateBr(loop_block);
+        builder->SetInsertPoint(loop_block);
+        
+        auto cond = node.expr->codegen(*this)->value;
+        if(!cond)
+        {
+            return nullptr;
+        }
+        builder->CreateCondBr(cond, true_block, cont_block);
 
         // then block
         builder->SetInsertPoint(true_block);
@@ -839,13 +842,11 @@ std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
         {
             true_value = true_class->value;
         }
+        builder->CreateBr(loop_block);
 
-        // merge block
-        builder->CreateBr(merge_block);
-        true_block = builder->GetInsertBlock();
-
-        parent_function->getBasicBlockList().push_back(merge_block);
-        builder->SetInsertPoint(merge_block);
+        // cont block
+        parent_function->getBasicBlockList().push_back(cont_block);
+        builder->SetInsertPoint(cont_block);
         return true_class;
     }
 }

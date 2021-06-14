@@ -24,5 +24,9 @@ int main()
     {
         ans = 22;
     }
+    while(ans > 0)
+    {
+        y = y + 1;
+    }
     return ans;
 }

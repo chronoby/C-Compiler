@@ -64,3 +64,8 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 * 增加了函数返回值
 * 修改了变量调用的方式：使用Variable class
 * 增加了用于生成机器码的测试脚本test.sh
+
+------
+
+2021-06-14 wby:
+* Add statements: if, if-else while
