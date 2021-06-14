@@ -527,7 +527,6 @@ std::shared_ptr<Variable> Visitor::codegen(const AstConditionalExpr& node)
 
 std::shared_ptr<Variable> Visitor::codegen(const AstAssignmentExpr& node)
 {
-    std::cout<<"???1" << std::endl;
     switch (node.expr_type)
     {
         case AstAssignmentExpr::ExprType::CONDITIONAL:
@@ -538,10 +537,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAssignmentExpr& node)
         {
             // need update
             // return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
-            std::cout<<"???2" << std::endl;
             auto val = this->builder->CreateStore(node.assign_expr->codegen(*this)->value, node.unary_expr->codegen(*this)->addr, false);
             // return std::make_shared<Variable>(node.assign_expr->codegen(*this)->value, nullptr);
-            std::cout << ":::" << val << std::endl;
             return std::make_shared<Variable>(val, nullptr);
         }
     }
@@ -696,7 +693,6 @@ std::shared_ptr<Variable> Visitor::codegen(const AstStmt& node)
     switch (node.stmt_type)
     {
     case AstStmt::StmtType::EXPR :
-        std::cout<<node.expr_stmt<<std::endl;
         return node.expr_stmt->codegen(*this);
         break;
     
@@ -709,7 +705,6 @@ std::shared_ptr<Variable> Visitor::codegen(const AstStmt& node)
         break;
 
     case AstStmt::StmtType::COMPOUND:
-        std::cout << "fuck com " << std::endl;
         return node.compound_stmt->codegen(*this);
         break;
 
@@ -746,7 +741,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
     {
         return nullptr;
     }
-    if(node.decl_type == AstSelectionStmt::DeclType::IF_ELSE)
+    if(node.stmt_type == AstSelectionStmt::StmtType::IF_ELSE)
     {
         llvm::Function* parent_function = builder->GetInsertBlock()->getParent();
 
@@ -790,7 +785,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
         // pn->addIncoming(false_value, false_block);
         // return std::make_shared<Variable>(pn, nullptr);;
     }
-    else if(node.decl_type == AstSelectionStmt::DeclType::IF)
+    else if(node.stmt_type == AstSelectionStmt::StmtType::IF)
     {
         llvm::Function* parent_function = builder->GetInsertBlock()->getParent();
 
@@ -803,6 +798,42 @@ std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
         builder->SetInsertPoint(true_block);
         
         auto true_class = node.stmt1->codegen(*this);
+        llvm::Value* true_value = nullptr;
+        if(true_class)
+        {
+            true_value = true_class->value;
+        }
+
+        // merge block
+        builder->CreateBr(merge_block);
+        true_block = builder->GetInsertBlock();
+
+        parent_function->getBasicBlockList().push_back(merge_block);
+        builder->SetInsertPoint(merge_block);
+        return true_class;
+    }
+}
+
+std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
+{
+    auto cond = node.expr->codegen(*this)->value;
+    if(!cond)
+    {
+        return nullptr;
+    }
+    if(node.stmt_type == AstIterStmt::StmtType::WHILE)
+    {
+        llvm::Function* parent_function = builder->GetInsertBlock()->getParent();
+
+        llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*context, "then", parent_function);
+        llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*context, "ifcont");
+
+        builder->CreateCondBr(cond, true_block, merge_block);
+
+        // then block
+        builder->SetInsertPoint(true_block);
+        
+        auto true_class = node.stmt->codegen(*this);
         llvm::Value* true_value = nullptr;
         if(true_class)
         {

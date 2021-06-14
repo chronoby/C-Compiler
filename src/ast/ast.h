@@ -55,6 +55,7 @@ class AstInitializer;
 class AstStmt;
 class AstCompoundStmt;
 class AstSelectionStmt;
+class AstIterStmt;
 class AstDeclList;
 class AstStmtList;
 class AstExprStmt;
@@ -579,17 +580,30 @@ public:
 class AstSelectionStmt : public AstStatement
 {
 public:
-    enum class DeclType {IF, IF_ELSE};
-    AstSelectionStmt(AstExpr* ex, AstStmt* stm1) : expr(ex), stmt1(stm1), decl_type(DeclType::IF) {}
+    enum class StmtType {IF, IF_ELSE};
+    AstSelectionStmt(AstExpr* ex, AstStmt* stm1) : expr(ex), stmt1(stm1), stmt_type(StmtType::IF) {}
     AstSelectionStmt(AstExpr* ex, AstStmt* stm1, AstStmt* stm2) : 
-        expr(ex), stmt1(stm1), stmt2(stm2), decl_type(DeclType::IF_ELSE) {}
+        expr(ex), stmt1(stm1), stmt2(stm2), stmt_type(StmtType::IF_ELSE) {}
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor);
 
-    DeclType decl_type;
+    StmtType stmt_type;
     AstExpr* expr;
     AstStmt* stmt1;
     AstStmt* stmt2;
+};
+
+class AstIterStmt : public AstStatement
+{
+public:
+    enum class StmtType {WHILE, FOR, DO_WHILE};
+    AstIterStmt(AstExpr* ex, AstStmt* stm) : expr(ex), stmt(stm), stmt_type(StmtType::WHILE) {}
+
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor);
+
+    StmtType stmt_type;
+    AstExpr* expr;
+    AstStmt* stmt;
 };
 
 class AstDeclList: public AstNode

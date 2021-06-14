@@ -43,6 +43,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstCompoundStmt* compound_stmt;
     AstStmt* stmt;
     AstSelectionStmt* selection_stmt;
+    AstIterStmt* iter_stmt;
     AstDeclList* decl_list;
     AstStmtList* stmt_list;
     AstExprStmt* expr_stmt;
@@ -72,7 +73,6 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type <cond_expr> conditional_expr
 %type <assign_expr> assignment_expr
 %type <expr> expr
-%type <selection_stmt> selection_stmt
 %type<translation_unit> translation_unit
 %type<extern_decl> external_decl
 %type<decl> decl
@@ -90,6 +90,8 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type<decl_list> decl_list;
 %type<stmt_list> stmt_list;
 %type<stmt> stmt;
+%type<selection_stmt> selection_stmt
+%type<iter_stmt> iter_stmt
 %type<expr_stmt> expr_stmt;
 %type<parameter_type_list> parameter_type_list;
 %type<parameter_decl> parameter_decl;
@@ -323,14 +325,20 @@ stmt :
     | expr_stmt { $$ = new AstStmt($1); }
     | selection_stmt { $$ = new AstStmt($1); }
     | jump_stmt { $$ = new AstStmt($1); }
-    /* | iter_stmt
-    | jump_stmt */
+    | iter_stmt
     ;
 
 selection_stmt :
     IF '(' expr ')' stmt { $$ = new AstSelectionStmt($3, $5); }
 	| IF '(' expr ')' stmt ELSE stmt { $$ = new AstSelectionStmt($3, $5, $7); }
     ;
+
+iter_stmt :
+    WHILE '(' expr ')' stmt { $$ = new AstIterStmt($3, $5); }
+	/* | DO statement WHILE '(' expression ')' ';'
+	| FOR '(' expression_statement expression_statement ')' statement
+	| FOR '(' expression_statement expression_statement expression ')' statement */
+	;
 
 compound_stmt : 
     '{' '}' { $$ = new AstCompoundStmt(); }
