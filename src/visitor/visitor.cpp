@@ -527,6 +527,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstConditionalExpr& node)
 
 std::shared_ptr<Variable> Visitor::codegen(const AstAssignmentExpr& node)
 {
+    std::cout<<"???1" << std::endl;
     switch (node.expr_type)
     {
         case AstAssignmentExpr::ExprType::CONDITIONAL:
@@ -537,9 +538,11 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAssignmentExpr& node)
         {
             // need update
             // return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
-            
-            this->builder->CreateStore(node.assign_expr->codegen(*this)->value, node.unary_expr->codegen(*this)->addr, false);
-            return std::make_shared<Variable>(node.assign_expr->codegen(*this)->value, nullptr);
+            std::cout<<"???2" << std::endl;
+            auto val = this->builder->CreateStore(node.assign_expr->codegen(*this)->value, node.unary_expr->codegen(*this)->addr, false);
+            // return std::make_shared<Variable>(node.assign_expr->codegen(*this)->value, nullptr);
+            std::cout << ":::" << val << std::endl;
+            return std::make_shared<Variable>(val, nullptr);
         }
     }
     return nullptr;
@@ -689,14 +692,25 @@ std::shared_ptr<Variable> Visitor::codegen(const AstInitializer& node)
 
 std::shared_ptr<Variable> Visitor::codegen(const AstStmt& node)
 {
+    
     switch (node.stmt_type)
     {
     case AstStmt::StmtType::EXPR :
+        std::cout<<node.expr_stmt<<std::endl;
         return node.expr_stmt->codegen(*this);
         break;
     
     case AstStmt::StmtType::JUMP:
         return node.jump_stmt->codegen(*this);
+        break;
+
+    case AstStmt::StmtType::SELECT:
+        return node.selection_stmt->codegen(*this);
+        break;
+
+    case AstStmt::StmtType::COMPOUND:
+        std::cout << "fuck com " << std::endl;
+        return node.compound_stmt->codegen(*this);
         break;
 
     default:
@@ -709,43 +723,126 @@ std::shared_ptr<Variable> Visitor::codegen(const AstCompoundStmt& node)
 {
     auto env = new LocalEnv();
     this->envs.push_back(env);
-    
+
+    auto ret = std::shared_ptr<Variable>(nullptr);
     if (node.decl_list)
     {
-        node.decl_list->codegen(*this);
+        ret = node.decl_list->codegen(*this);
     }
 
     if (node.stmt_list)
     {
-        node.stmt_list->codegen(*this);
+        ret = node.stmt_list->codegen(*this);
     }
 
     this->envs.pop_back();
-    return nullptr;
+    return ret;
+}
+
+std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
+{
+    auto cond = node.expr->codegen(*this)->value;
+    if(!cond)
+    {
+        return nullptr;
+    }
+    if(node.decl_type == AstSelectionStmt::DeclType::IF_ELSE)
+    {
+        llvm::Function* parent_function = builder->GetInsertBlock()->getParent();
+
+        llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*context, "then", parent_function);
+        llvm::BasicBlock* false_block = llvm::BasicBlock::Create(*context, "else");
+        llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*context, "ifcont");
+
+        builder->CreateCondBr(cond, true_block, false_block);
+
+        // then block
+        builder->SetInsertPoint(true_block);
+        auto true_class = node.stmt1->codegen(*this);
+        llvm::Value* true_value = nullptr;
+        if(true_class)
+        {
+            true_value = true_class->value;
+        }
+
+        builder->CreateBr(merge_block);
+        true_block = builder->GetInsertBlock();
+
+        // else block
+        parent_function->getBasicBlockList().push_back(false_block);
+        builder->SetInsertPoint(false_block);
+        
+        llvm::Value* false_value = nullptr;
+        auto false_class = node.stmt2->codegen(*this);
+        if(false_class)
+        {
+            false_value = false_class->value;
+        }
+        builder->CreateBr(merge_block);
+
+        false_block = builder->GetInsertBlock();
+        parent_function->getBasicBlockList().push_back(merge_block);
+        builder->SetInsertPoint(merge_block);
+        return false_class;
+        // llvm::PHINode* pn = builder->CreatePHI(true_value->getType(), 2, "iftmp");
+        // std::cout << true_value << " " << false_value << std::endl;
+        // pn->addIncoming(true_value, true_block);
+        // pn->addIncoming(false_value, false_block);
+        // return std::make_shared<Variable>(pn, nullptr);;
+    }
+    else if(node.decl_type == AstSelectionStmt::DeclType::IF)
+    {
+        llvm::Function* parent_function = builder->GetInsertBlock()->getParent();
+
+        llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*context, "then", parent_function);
+        llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*context, "ifcont");
+
+        builder->CreateCondBr(cond, true_block, merge_block);
+
+        // then block
+        builder->SetInsertPoint(true_block);
+        
+        auto true_class = node.stmt1->codegen(*this);
+        llvm::Value* true_value = nullptr;
+        if(true_class)
+        {
+            true_value = true_class->value;
+        }
+
+        // merge block
+        builder->CreateBr(merge_block);
+        true_block = builder->GetInsertBlock();
+
+        parent_function->getBasicBlockList().push_back(merge_block);
+        builder->SetInsertPoint(merge_block);
+        return true_class;
+    }
 }
 
 std::shared_ptr<Variable> Visitor::codegen(const AstDeclList& node)
 {
+    auto ret = std::shared_ptr<Variable>(nullptr);
     for (auto decl : node.decls)
     {
         if (decl)
         {
-            decl->codegen(*this);
+            ret = decl->codegen(*this);
         }
     }
-    return nullptr;
+    return ret;
 }
 
 std::shared_ptr<Variable> Visitor::codegen(const AstStmtList& node)
 {
+    auto ret = std::shared_ptr<Variable>(nullptr);
     for (auto stmt : node.stmts)
     {
         if (stmt)
         {
-            stmt->codegen(*this);
+            ret = stmt->codegen(*this);
         }
     }
-    return nullptr;
+    return ret;
 }
 
 std::shared_ptr<Variable> Visitor::codegen(const AstTranslationUnit& node)

@@ -2,5 +2,5 @@ compiler
 parser.cpp
 parser.hpp
 scanner.cpp
-
+out.ll
 .vscode/

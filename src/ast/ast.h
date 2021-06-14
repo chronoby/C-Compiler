@@ -54,6 +54,7 @@ class AstAbstractDeclarator;
 class AstInitializer;
 class AstStmt;
 class AstCompoundStmt;
+class AstSelectionStmt;
 class AstDeclList;
 class AstStmtList;
 class AstExprStmt;
@@ -551,9 +552,11 @@ public:
     AstCompoundStmt* compound_stmt;
     AstExprStmt* expr_stmt;
     AstJumpStmt* jump_stmt;
+    AstSelectionStmt* selection_stmt;
 
     AstStmt(AstCompoundStmt* compound_stmt): compound_stmt(compound_stmt), stmt_type(StmtType::COMPOUND) {}
     AstStmt(AstExprStmt* expr_stmt): expr_stmt(expr_stmt), stmt_type(StmtType::EXPR) {}
+    AstStmt(AstSelectionStmt* sele_stmt): selection_stmt(sele_stmt), stmt_type(StmtType::SELECT) {}
     AstStmt(AstJumpStmt* jump_stmt): jump_stmt(jump_stmt), stmt_type(StmtType::JUMP) {}
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
@@ -571,6 +574,22 @@ public:
     AstCompoundStmt(AstDeclList* decl_l, AstStmtList* stmt_l) : stmt_list(stmt_l), decl_list(decl_l) {}
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor);
+};
+
+class AstSelectionStmt : public AstStatement
+{
+public:
+    enum class DeclType {IF, IF_ELSE};
+    AstSelectionStmt(AstExpr* ex, AstStmt* stm1) : expr(ex), stmt1(stm1), decl_type(DeclType::IF) {}
+    AstSelectionStmt(AstExpr* ex, AstStmt* stm1, AstStmt* stm2) : 
+        expr(ex), stmt1(stm1), stmt2(stm2), decl_type(DeclType::IF_ELSE) {}
+
+    virtual std::shared_ptr<Variable> codegen(Visitor& visitor);
+
+    DeclType decl_type;
+    AstExpr* expr;
+    AstStmt* stmt1;
+    AstStmt* stmt2;
 };
 
 class AstDeclList: public AstNode

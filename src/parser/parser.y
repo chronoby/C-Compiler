@@ -42,6 +42,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstFunctionDef* function_def;
     AstCompoundStmt* compound_stmt;
     AstStmt* stmt;
+    AstSelectionStmt* selection_stmt;
     AstDeclList* decl_list;
     AstStmtList* stmt_list;
     AstExprStmt* expr_stmt;
@@ -71,7 +72,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type <cond_expr> conditional_expr
 %type <assign_expr> assignment_expr
 %type <expr> expr
-
+%type <selection_stmt> selection_stmt
 %type<translation_unit> translation_unit
 %type<extern_decl> external_decl
 %type<decl> decl
@@ -85,6 +86,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 
 %type<function_def> function_def;
 %type<compound_stmt> compound_stmt;
+
 %type<decl_list> decl_list;
 %type<stmt_list> stmt_list;
 %type<stmt> stmt;
@@ -98,8 +100,8 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
 %token PTR_OP INC_OP DEC_OP AND_OP OR_OP EQ_OP NE_OP LE_OP GE_OP ELLIPSIS
-%token SIZEOF
 %token RETURN
+%token SIZEOF IF ELSE WHILE
 
 %start translation_unit
 %%
@@ -319,9 +321,15 @@ stmt :
     /* labeled_stmt
     |*/ compound_stmt { $$ = new AstStmt($1); }
     | expr_stmt { $$ = new AstStmt($1); }
-    | jump_stmt { $$ = new AstStmt($1); } /*
-    | select_stmt
-    | iter_stmt */
+    | selection_stmt { $$ = new AstStmt($1); }
+    | jump_stmt { $$ = new AstStmt($1); }
+    /* | iter_stmt
+    | jump_stmt */
+    ;
+
+selection_stmt :
+    IF '(' expr ')' stmt { $$ = new AstSelectionStmt($3, $5); }
+	| IF '(' expr ')' stmt ELSE stmt { $$ = new AstSelectionStmt($3, $5, $7); }
     ;
 
 compound_stmt : 

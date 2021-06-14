@@ -20,6 +20,9 @@ TYPE_UNSIGNED   "unsigned"
 VOID        "void"
 SIZEOF      "sizeof"
 RETURN      "return"
+IF          "if"
+ELSE        "else"
+WHILE       "while"
 IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
 
 ASSIGN      "="
@@ -71,8 +74,11 @@ STRING      \"(\\.|[^\\"])*\"
 {TYPE_SIGNED}               SAVE_TOKEN; return TYPE_SIGNED;
 {TYPE_UNSIGNED}             SAVE_TOKEN; return TYPE_UNSIGNED;
 {TYPE_CHAR}                 SAVE_TOKEN; return TYPE_CHAR;
-{SIZEOF}                    return SIZEOF;
-{RETURN}                    return RETURN;
+{IF}                        SAVE_TOKEN; return IF;
+{ELSE}                      SAVE_TOKEN; return ELSE;
+{WHILE}                     SAVE_TOKEN; return WHILE;
+{SIZEOF}                    SAVE_TOKEN; return SIZEOF;
+{RETURN}                    SAVE_TOKEN; return RETURN;
 
 {IDENTIFIER}                SAVE_TOKEN; return IDENTIFIER;
 

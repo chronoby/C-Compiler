@@ -126,6 +126,11 @@ std::shared_ptr<Variable> AstCompoundStmt::codegen(Visitor& visitor)
     return visitor.codegen(*this);
 }
 
+std::shared_ptr<Variable> AstSelectionStmt::codegen(Visitor& visitor)
+{
+    return visitor.codegen(*this);
+}
+
 std::shared_ptr<Variable> AstTranslationUnit::codegen(Visitor& visitor)
 {
     return visitor.codegen(*this);

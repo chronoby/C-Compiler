@@ -15,6 +15,14 @@ int main()
 {
     int ans = plus(x, y);
     ans = minus(x, y);
-
-    return ans + 5;
+    if(ans == 26)
+    {
+        if(ans != 0)
+            ans = 11;
+    }
+    else
+    {
+        ans = 22;
+    }
+    return ans;
 }
