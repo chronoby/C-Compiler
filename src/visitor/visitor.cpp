@@ -124,22 +124,92 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
         }
         case AstPrimaryExpr::DataType::STRING:
         {
-            std::string str_content = node.value.substr(1, node.value.length() - 2);
+            std::string str_content = node.value;
+            str_content = str_content.substr(1, str_content.length() - 2);
+
+            char buf[256];
+            int ptr = 0;
+
+            for (int i = 0; i < str_content.size() && i < 256; i++)
+            {
+                if (str_content[i] == '\\')
+                {
+                    if (i < str_content.size() - 1 && str_content[i + 1] == '\\')
+                    {
+                        buf[ptr++] = '\\';
+                        i++;
+                    }
+                    else if (i < str_content.size() - 1 && str_content[i + 1] != '\\')
+                    {
+                        switch (str_content[i + 1])
+                        {
+                        case 'a':
+                            buf[ptr++] = '\a';
+                            i++;
+                            break;
+
+                        case 'b':
+                            buf[ptr++] = '\b';
+                            i++;
+                            break;
+
+                        case 'f':
+                            buf[ptr++] = '\f';
+                            i++;
+                            break;
+
+                        case 'n':
+                            buf[ptr++] = '\n';
+                            i++;
+                            break;
+
+                        case 'r':
+                            buf[ptr++] = '\r';
+                            i++;
+                            break;
+
+                        case 't':
+                            buf[ptr++] = '\t';
+                            i++;
+                            break;
+
+                        case '0':
+                            buf[ptr++] = 0;
+                            i++;
+                            break;
+
+                        case 'v':
+                            buf[ptr++] = '\v';
+                            i++;
+                            break;
+
+                        default:
+                            buf[ptr++] = '\\';
+                        }
+                    }
+                }
+                else
+                {
+                    buf[ptr++] = str_content[i];
+                }
+            }
+            buf[ptr] =  0;
+            
+            // str_content = str_content.substr(1, str_content.length() - 2);
+            
+            str_content = std::string(buf);
+
             int content_len = str_content.length();
             if (content_len > 255) {
                 std::cerr << "WARNING: CUT string literal to length of 255" << std::endl;
                 str_content = str_content.substr(0, 255);
                 content_len = str_content.size();
             }
-            // char zero = 0;
-            // for (int i = 0; i < 255 - content_len; i++) str_content = str_content + zero;
 
             // std::cout << str_content << std::endl;
-
             llvm::Value* str_mem = this->builder->CreateGlobalStringPtr(str_content, "", 0, &*this->module);
-            // llvm::Value* str_load = this->builder->CreateLoad(str_mem);
             // std::cout << str_mem << std::endl;
-            addr =  str_mem;
+            value = str_mem;
             break;
         }
         default:
@@ -236,6 +306,45 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
         {
             llvm::Function* func = nullptr;
             llvm::FunctionType* func_type = nullptr;
+
+            static llvm::Function* scanf_func = nullptr;
+            static llvm::Function* printf_func = nullptr;
+
+            // if (node.identifier_name == "scanf")
+            // {
+            //     std::vector<llvm::Type*> arg_types = { llvm::Type::getInt8PtrTy(this->context) };
+            //     func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(this->context), arg_types, true);
+            //     func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "scanf", &*(this->module));
+            //     func->setCallingConv(llvm::CallingConv::C);
+
+            // }
+            if (node.identifier_name == "printf")
+            {
+                if (printf_func == nullptr)
+                {
+                    std::vector<llvm::Type*> arg_types = { llvm::Type::getInt8PtrTy(*context) };
+                    func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context), arg_types, true);
+                    func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "printf", &*(this->module));
+                    func->setCallingConv(llvm::CallingConv::C);
+                    printf_func = func;
+                }
+
+                std::vector<llvm::Value*> printf_args;
+
+                auto expr_list = node.argument_expr_list;
+                if (expr_list)
+                {
+                    for (auto expr : expr_list->expr_list)
+                    {
+                        auto arg = expr->codegen(*this)->value;
+                        printf_args.push_back(arg);
+                    }
+                }
+
+                llvm::Value* ret = this->builder->CreateCall(printf_func, printf_args, "printf_call");
+                return std::make_shared<Variable>(ret, nullptr);
+            }
+
             for (int i = this->envs.size() - 1; i >= 0; i--)
             {
                 auto env = this->envs[i];

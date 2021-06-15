@@ -10,6 +10,8 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 /* Represents the many different ways we can access our data */
 %union {
     int type_int;
+    char* str;
+
     AstPrimaryExpr* primary_expr;
     AstPostfixExpr* postfix_expr;
     AstUnaryExpr* unary_expr;

@@ -1,5 +1,5 @@
 ./compiler
 llc out.ll
-gcc out.s
+gcc -no-pie out.s
 ./a.out
-echo $?
+
