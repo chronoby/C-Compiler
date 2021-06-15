@@ -85,6 +85,7 @@ public:
     enum class DataType {INTEGER, HEXI, OCTAL, FLOAT, CHAR, STRING};
     
     AstPrimaryExpr(AstPrimaryExpr::DataType dtype, std::string val): value(val), data_type(dtype), expr_type(AstPrimaryExpr::ExprType::CONSTANT) {}
+    // AstPrimaryExpr(AstPrimaryExpr::DataType dtype, char* val): str_value(val), data_type(dtype), expr_type(AstPrimaryExpr::ExprType::CONSTANT) {}
     AstPrimaryExpr(std::string name): identifier_name(name), expr_type(AstPrimaryExpr::ExprType::ID) {}
     AstPrimaryExpr(AstExpr* expr): expr(expr), value(""), expr_type(AstPrimaryExpr::ExprType::PR_EXPR) {}
 
@@ -99,6 +100,7 @@ public:
     // INTEGER | HEXI | OCTAL | ...
     DataType data_type;
     std::string value;
+    char* str_value;
 
     std::string identifier_name;
 };

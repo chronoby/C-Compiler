@@ -87,6 +87,7 @@ STRING      \"(\\.|[^\\"])*\"
 {OCTAL}                     SAVE_TOKEN; return OCTAL;
 {FLOAT}                     SAVE_TOKEN; return FLOAT;
 {CHAR}                      SAVE_TOKEN; return CHAR;
+
 {STRING}                    SAVE_TOKEN; return STRING;
 
 {PTR_OP}                    return PTR_OP;
