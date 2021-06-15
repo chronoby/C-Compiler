@@ -795,8 +795,25 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
 
         if (declarator->declarator_type == AstDeclarator::DeclaratorType::VAR)
         {
-            var_type = type_spec->codegen(*this);
-        }  
+            if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::ID)
+            {
+                var_type = type_spec->codegen(*this);
+            }
+            else if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::BR)
+            {
+                // get array size
+                int num = 5;
+                auto num_value = declarator->direct_declarator->prime_expr->codegen(*this)->value;
+                if (llvm::ConstantInt* CI = llvm::dyn_cast<llvm::ConstantInt>(num_value)) {
+                    if (CI->getBitWidth() <= 32) {
+                        num = CI->getSExtValue();
+                    }
+                }
+                // get array type
+                var_type = type_spec->codegen(*this);
+                var_type = llvm::ArrayType::get(var_type, num);
+            }
+        }
         else if (declarator->declarator_type == AstDeclarator::DeclaratorType::POINTER)
         {
             var_type = type_spec->codegen(*this);
@@ -825,7 +842,6 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
                     std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
                 }
             }
-            
             LocalEnv* present_env = envs[0];
             if (present_env->locals.find(var_name) != present_env->locals.end())
             {
