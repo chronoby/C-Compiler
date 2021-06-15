@@ -665,17 +665,35 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
                     std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
                     return nullptr;
                 }
-
-                llvm::AllocaInst* var = this->builder->CreateAlloca(var_type, nullptr, var_name);
-
-                if (initializer)
+                if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::ID)
                 {
-                    auto initializer_value = initializer->codegen(*this)->value;
-                    llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
+                    llvm::AllocaInst* var = this->builder->CreateAlloca(var_type, nullptr, var_name);
+
+                    if (initializer)
+                    {
+                        auto initializer_value = initializer->codegen(*this)->value;
+                        llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
+                    }
+                    present_env->locals.insert({var_name, var});
+                    return std::make_shared<Variable>(nullptr, var);
+                    
+                }
+                else if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::BR)
+                {
+                    int num = 5;
+                    auto num_value = declarator->direct_declarator->prime_expr->codegen(*this)->value;
+                    if (llvm::ConstantInt* CI = llvm::dyn_cast<llvm::ConstantInt>(num_value)) {
+                        if (CI->getBitWidth() <= 32) {
+                            num = CI->getSExtValue();
+                        }
+                    }
+                    llvm::ArrayType* arrayType = llvm::ArrayType::get(var_type, num);
+                    llvm::AllocaInst* var = this->builder->CreateAlloca(arrayType, nullptr, var_name);
+                    present_env->locals.insert({var_name, var});
+                    return std::make_shared<Variable>(nullptr, var);
                 }
 
-                present_env->locals.insert({var_name, var});
-                return std::make_shared<Variable>(nullptr, var);
+                
             }
         }
     }

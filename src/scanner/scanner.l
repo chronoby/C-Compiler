@@ -36,6 +36,8 @@ LP          "("
 RP          ")"
 LB          "{"
 RB          "}"
+LF          "["
+RF          "]"
 DOT         "."
 COMMA       ","
 LESS        "<"
@@ -110,6 +112,8 @@ STRING      \"(\\.|[^\\"])*\"
 {RP}                        {return(')');}
 {LB}                        return('{');
 {RB}                        return('}');
+{LF}                        return('[');
+{RF}                        return(']');
 {DOT}                       return '.';
 {COMMA}                     return ',';
 {LESS}                      return '<';

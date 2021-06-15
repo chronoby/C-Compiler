@@ -494,6 +494,7 @@ public:
     DeclaratorType declarator_type;
     std::string id_name;
     AstParameterTypeList* param_type_list;
+    AstPrimaryExpr* prime_expr;
 
     AstDirectDeclarator(std::string str, DeclaratorType type): id_name(str), declarator_type(type) {}
     void setType(DeclaratorType type) { this->declarator_type = type; }

@@ -289,9 +289,9 @@ declarator :
 
 direct_declarator : 
     IDENTIFIER { $$ = new AstDirectDeclarator(*$1, AstDirectDeclarator::DeclaratorType::ID); }
-	/* | '(' declarator ')'
-	| direct_declarator '[' constant_expression ']'
-	| direct_declarator '[' ']'
+	/* | '(' declarator ')' */
+	| direct_declarator '[' primary_expr ']' { $$ = $1; $$->prime_expr = $3; $$->setType(AstDirectDeclarator::DeclaratorType::BR); }
+	/* | direct_declarator '[' ']'
 	| direct_declarator '(' identifier_list ')'  */
 	| direct_declarator '(' parameter_type_list ')' { $$ = $1; $$->param_type_list=$3; $$->setType(AstDirectDeclarator::DeclaratorType::FUNC_PARAM);  }
 	| direct_declarator '(' ')' { $$ = $1; $$->setType(AstDirectDeclarator::DeclaratorType::FUNC_EMPTY); }
