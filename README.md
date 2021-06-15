@@ -2,19 +2,19 @@
 
 A Tiny C compiler(demo).
 
-## Build and run
+## Build
 
 ```
 make
-./compiler
 ```
 
-## Test
+## Run
+```
+./compiler <FILE> [options]
+```
+use `./compiler --help` or `./compiler -h` for usage.
 
-```
-bash test.sh
-```
-The last line is the `RETURN` value of main function.
+the `test.sh` file is no longer useful.
 
 ## Feature
 
