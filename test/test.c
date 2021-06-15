@@ -1,5 +1,8 @@
+int arr1[10];
+
 int main()
 {
+    int arr2[10];
     double a = 12.;
     double *pa = &a;
     double **ppa = &pa;

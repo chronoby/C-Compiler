@@ -3,4 +3,7 @@ parser.cpp
 parser.hpp
 scanner.cpp
 out.ll
+out.s
+a.out
+
 .vscode/
