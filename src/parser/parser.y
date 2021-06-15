@@ -123,7 +123,7 @@ primary_expr :
     | FLOAT { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::FLOAT, *$1); }
     | CHAR { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::CHAR, *$1); }
     | STRING { $$ = new AstPrimaryExpr(AstPrimaryExpr::DataType::STRING, *$1); }
-    /*| '('expression')'  { $$ = new AstPrimaryExpr($2); }*/  /* NOTE: different from present expr */
+    | '('expr')'  { $$ = new AstPrimaryExpr($2); } 
     ;
 
 postfix_expr :
