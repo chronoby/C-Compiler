@@ -38,7 +38,7 @@ Visitor::Visitor()
     envs.push_back(new LocalEnv());
 }
 
-void Visitor::codegenProgram(AstTranslationUnit* root)
+void Visitor::codegenProgram(AstTranslationUnit* root, const char* filename)
 {
     root->codegen(*this);
 
@@ -48,9 +48,9 @@ void Visitor::codegenProgram(AstTranslationUnit* root)
     OS << *module;
     // std::cout << "get this line "<< std::endl;
     OS.flush();
-    std::cout << llvm_IR;
+    // std::cout << llvm_IR;
 
-    std::ofstream outfile("out.ll");
+    std::ofstream outfile(filename);
     outfile << llvm_IR;
     outfile.close();
 

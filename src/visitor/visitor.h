@@ -30,7 +30,7 @@ class Visitor
 {
 public:
     Visitor();
-    void codegenProgram(AstTranslationUnit* root);
+    void codegenProgram(AstTranslationUnit* root, const char* filename);
     void configureTarget();
 
     virtual std::shared_ptr<Variable> codegen(const AstPrimaryExpr& node);
