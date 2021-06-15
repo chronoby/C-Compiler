@@ -54,6 +54,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(const AstExternDecl& node);
     virtual std::shared_ptr<Variable> codegen(const AstDecl& node);
     llvm::Type* codegen(const AstTypeSpecifier& node);
+    llvm::Type* getPointerType(const AstTypeSpecifier& node);
     virtual std::shared_ptr<Variable> codegen(const AstInitializer& node);
     virtual std::shared_ptr<Variable> codegen(const AstTranslationUnit& node);
     virtual std::shared_ptr<Variable> codegen(const AstFunctionDef& node);

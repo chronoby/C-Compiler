@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 {
     std::cout << "Begin parsing" << std::endl;
 
-    const char *path = "test/test2.c";
+    const char *path = "test/test.c";
     FILE *pt = fopen(path, "r");
     if(!pt)
     {

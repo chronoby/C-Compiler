@@ -23,6 +23,7 @@ class AstPrimaryExpr;
 class AstPostfixExpr;
 class AstArgumentExprList;
 class AstUnaryExpr;
+class AstUnaryOp;
 class AstCastExpr;
 class AstMultiplicativeExpr;
 class AstAdditiveExpr;
@@ -47,6 +48,8 @@ class AstTypeSpecifier;
 class AstTypeQualifier;
 class AstDeclarator;
 class AstDirectDeclarator;
+class AstPointer;
+class AstTypeQualifierList;
 class AstParameterTypeList;
 class AstParameterList;
 class AstParameterDecl;
@@ -143,18 +146,38 @@ public:
 class AstUnaryExpr : public AstExpression
 {
 public:
-    enum class ExprType {POSTFIX, OP, CAST, SIZEOF_TYPE, SIZEOF_EXPR};
+    enum class ExprType {POSTFIX, OP, UNARY_OP, CAST, SIZEOF_TYPE, SIZEOF_EXPR};
     enum class OpType {INC, DEC};
 
     AstUnaryExpr(AstPostfixExpr* expr): postfix_expr(expr), expr_type(ExprType::POSTFIX) { }
+    AstUnaryExpr(AstCastExpr* expr, AstUnaryOp* unary_op): cast_expr(expr), unary_op(unary_op), expr_type(ExprType::UNARY_OP) { }
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 
 // private:
     AstPostfixExpr* postfix_expr;
+    AstCastExpr* cast_expr;
     AstUnaryExpr* unary_expr;
+    AstUnaryOp* unary_op;
     ExprType expr_type;
     OpType op_type;
+};
+
+class AstUnaryOp
+{
+public:
+    enum class OpType
+    {
+        AND,
+        STAR,
+        PLUS,
+        MINUS,
+        INV,
+        NOT
+    };
+
+    OpType type;
+    AstUnaryOp(OpType t): type(t) {}
 };
 
 class AstCastExpr: public AstExpression
@@ -483,10 +506,12 @@ public:
     // pointer is not supported now
     enum class DeclaratorType {POINTER, VAR};
 
+    AstPointer* pointer;
     AstDirectDeclarator* direct_declarator;
     DeclaratorType declarator_type;
 
-    AstDeclarator(AstDirectDeclarator* direct_declarator): direct_declarator(direct_declarator), declarator_type(DeclaratorType::VAR) {}
+    AstDeclarator(AstDirectDeclarator* direct_declarator): direct_declarator(direct_declarator), pointer(nullptr), declarator_type(DeclaratorType::VAR) {}
+    AstDeclarator(AstPointer* pointer, AstDirectDeclarator* direct_declarator): pointer(pointer), direct_declarator(direct_declarator), declarator_type(DeclaratorType::POINTER) {}
 };
 
 class AstDirectDeclarator // : public AstNode
@@ -499,6 +524,22 @@ public:
 
     AstDirectDeclarator(std::string str, DeclaratorType type): id_name(str), declarator_type(type) {}
     void setType(DeclaratorType type) { this->declarator_type = type; }
+};
+
+class AstPointer
+{
+public:
+    // TODO: ADD CONST IF AVALABLE
+    AstPointer* next;
+    AstTypeQualifierList* type_qualifier_list;
+
+    AstPointer() : next(nullptr), type_qualifier_list(nullptr) {}
+    AstPointer(AstPointer* next): next(next), type_qualifier_list(nullptr) {}
+};
+
+class AstTypeQualifierList
+{
+
 };
 
 class AstParameterTypeList

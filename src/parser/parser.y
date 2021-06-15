@@ -55,6 +55,9 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstArgumentExprList* argument_expr_list;
     AstJumpStmt* jump_stmt;
 
+    AstUnaryOp* unary_op;
+    AstPointer* pointer;
+
     std::string* string;
 }
 
@@ -100,6 +103,8 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type<parameter_list> parameter_list;
 %type<argument_expr_list> argument_expr_list;
 %type<jump_stmt> jump_stmt;
+%type<unary_op> unary_op;
+%type<pointer> pointer;
 
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
@@ -161,10 +166,19 @@ unary_expr :
     postfix_expr { $$ = new AstUnaryExpr($1); }
 	| INC_OP unary_expr
 	| DEC_OP unary_expr
-	/* | unary_operator cast_expr */
+	| unary_op cast_expr { $$ = new AstUnaryExpr($2, $1); }
 	| SIZEOF unary_expr
 	/* | SIZEOF '(' type_name ')' */
     ;
+
+unary_op :
+    '&' { $$ = new AstUnaryOp(AstUnaryOp::OpType::AND); }
+	| '*' { $$ = new AstUnaryOp(AstUnaryOp::OpType::STAR); }
+	| '+' { $$ = new AstUnaryOp(AstUnaryOp::OpType::PLUS); }
+	| '-' { $$ = new AstUnaryOp(AstUnaryOp::OpType::MINUS); }
+	| '~' { $$ = new AstUnaryOp(AstUnaryOp::OpType::STAR); }
+	| '!' { $$ = new AstUnaryOp(AstUnaryOp::OpType::NOT); }
+	;
 
 cast_expr : 
     unary_expr { $$ = new AstCastExpr($1); }
@@ -285,8 +299,8 @@ init_declarator :
     ;
 
 declarator : 
-    /* pointer direct_declarator 
-	|*/  direct_declarator { $$ = new AstDeclarator($1); }
+    pointer direct_declarator { $$ = new AstDeclarator($1, $2); }
+	|  direct_declarator { $$ = new AstDeclarator($1); }
     ;
 
 direct_declarator : 
@@ -297,6 +311,13 @@ direct_declarator :
 	| direct_declarator '(' identifier_list ')'  */
 	| direct_declarator '(' parameter_type_list ')' { $$ = $1; $$->param_type_list=$3; $$->setType(AstDirectDeclarator::DeclaratorType::FUNC_PARAM);  }
 	| direct_declarator '(' ')' { $$ = $1; $$->setType(AstDirectDeclarator::DeclaratorType::FUNC_EMPTY); }
+	;
+
+pointer
+	: '*' { $$ = new AstPointer();}
+	/* | '*' type_qualifier_list */
+	| '*' pointer { $$ = new AstPointer($2); }
+	/* | '*' type_qualifier_list pointer */
 	;
 
 parameter_type_list :

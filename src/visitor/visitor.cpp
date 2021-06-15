@@ -389,6 +389,36 @@ std::shared_ptr<Variable> Visitor::codegen(const AstUnaryExpr& node)
         {
             return node.postfix_expr->codegen(*this);
         }
+
+        case AstUnaryExpr::ExprType::UNARY_OP:
+        {
+            switch (node.unary_op->type)
+            {
+            case AstUnaryOp::OpType::AND:
+            {
+                std::shared_ptr<Variable> id = node.cast_expr->codegen(*this);
+                llvm::Value* ptr_value = id->addr;
+                if (ptr_value == nullptr)
+                {
+                    std::cerr << "ERROR: cannot get the address" << std::endl;
+                    return nullptr; 
+                } 
+                return std::make_shared<Variable>(ptr_value, nullptr);
+
+                break;
+            }
+            case AstUnaryOp::OpType::STAR:
+            {
+                std::shared_ptr<Variable> id = node.cast_expr->codegen(*this);
+                llvm::Value* value_ptr = id->value;
+                llvm::Value* value = this->builder->CreateLoad(value_ptr);
+                return std::make_shared<Variable>(value, value_ptr);
+                break;
+            }
+            default:
+                break;
+            }
+        }
     }
     return nullptr;
 }
@@ -704,6 +734,42 @@ llvm::Type* Visitor::codegen(const AstTypeSpecifier& node)
     }
 }
 
+llvm::Type* Visitor::getPointerType(const AstTypeSpecifier& node)
+{
+    switch (node.type)
+    {
+        case (AstTypeSpecifier::Type::INT):
+        {
+            return llvm::Type::getInt32PtrTy(*context);
+        }
+        case (AstTypeSpecifier::Type::SHORT):
+        {
+            return llvm::Type::getInt16PtrTy(*context);
+        }
+        case (AstTypeSpecifier::Type::LONG):
+        {
+            return llvm::Type::getInt32PtrTy(*context);
+        }
+        case (AstTypeSpecifier::Type::DOUBLE):
+        {
+            return llvm::Type::getDoublePtrTy(*context);
+        }
+        case (AstTypeSpecifier::Type::CHAR):
+        {
+            return llvm::Type::getInt8PtrTy(*context);            
+        }
+        case (AstTypeSpecifier::Type::FLOAT):
+        {
+            return llvm::Type::getFloatPtrTy(*context);
+        }
+        default:
+        {
+            std::cerr << "ERROR: invalid data type" << std::endl;
+            return nullptr;
+        }
+    }
+}
+
 std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
 {
     if (!node.decl_specifiers || node.decl_specifiers->type_specs.size() != 1)
@@ -724,69 +790,82 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
         auto declarator = init_declarator->declarator;
         auto initializer = init_declarator->initializer;
 
+        std::string var_name = declarator->direct_declarator->id_name;
+        llvm::Type* var_type = nullptr;
+
         if (declarator->declarator_type == AstDeclarator::DeclaratorType::VAR)
         {
-            std::string var_name = declarator->direct_declarator->id_name;
-            auto var_type = type_spec->codegen(*this);
-            llvm::Constant* initializer_v = llvm::ConstantAggregateZero::get(var_type);
-            if (envs.size() == 1)
+            var_type = type_spec->codegen(*this);
+        }  
+        else if (declarator->declarator_type == AstDeclarator::DeclaratorType::POINTER)
+        {
+            var_type = type_spec->codegen(*this);
+            auto ptr = declarator->pointer;
+            while (ptr != nullptr)
             {
-                if (initializer)
-                {
-                    auto initializer_value = initializer->codegen(*this)->value;
-                      
-                    if (llvm::isa<llvm::Constant>(initializer_value))
-                    {
-                        initializer_v = llvm::cast<llvm::Constant>(initializer_value);
-                    }
-                    else
-                    {
-                        std::cerr << "ERROR: global variables must be initialized with constants" << std::endl;
-                        std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
-                    }
-                }
-                
-                LocalEnv* present_env = envs[0];
-                if (present_env->locals.find(var_name) != present_env->locals.end())
-                {
-                    std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
-                    return nullptr;
-                }
-
-                llvm::GlobalVariable *var = new llvm::GlobalVariable(
-                    *(this->module),
-                    var_type,
-                    false,
-                    llvm::GlobalValue::ExternalLinkage,
-                    initializer_v,
-                    var_name
-                );
-                
-                present_env->locals.insert({var_name, var});
-                
-                return std::make_shared<Variable>(nullptr, var);
-            }
-            else
-            {
-                LocalEnv* present_env = envs.back();
-                if (present_env->locals.find(var_name) != present_env->locals.end())
-                {
-                    std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
-                    return nullptr;
-                }
-
-                llvm::AllocaInst* var = this->builder->CreateAlloca(var_type, nullptr, var_name);
-
-                if (initializer)
-                {
-                    auto initializer_value = initializer->codegen(*this)->value;
-                    llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
-                }
-
-                present_env->locals.insert({var_name, var});
-                return std::make_shared<Variable>(nullptr, var);
+                var_type = var_type->getPointerTo();
+                ptr = ptr->next;
             }
         }
+        
+        llvm::Constant* initializer_v = llvm::ConstantAggregateZero::get(var_type);
+        if (envs.size() == 1)
+        {
+            if (initializer)
+            {
+                auto initializer_value = initializer->codegen(*this)->value;
+                    
+                if (llvm::isa<llvm::Constant>(initializer_value))
+                {
+                    initializer_v = llvm::cast<llvm::Constant>(initializer_value);
+                }
+                else
+                {
+                    std::cerr << "ERROR: global variables must be initialized with constants" << std::endl;
+                    std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
+                }
+            }
+            
+            LocalEnv* present_env = envs[0];
+            if (present_env->locals.find(var_name) != present_env->locals.end())
+            {
+                std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
+                return nullptr;
+            }
+
+            llvm::GlobalVariable *var = new llvm::GlobalVariable(
+                *(this->module),
+                var_type,
+                false,
+                llvm::GlobalValue::ExternalLinkage,
+                initializer_v,
+                var_name
+            );
+            
+            present_env->locals.insert({var_name, var});
+            
+            return std::make_shared<Variable>(nullptr, var);
+        }
+        else
+        {
+            LocalEnv* present_env = envs.back();
+            if (present_env->locals.find(var_name) != present_env->locals.end())
+            {
+                std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
+                return nullptr;
+            }
+
+            llvm::AllocaInst* var = this->builder->CreateAlloca(var_type, nullptr, var_name);
+
+            if (initializer)
+            {
+                auto initializer_value = initializer->codegen(*this)->value;
+                llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
+            }
+
+            present_env->locals.insert({var_name, var});
+            return std::make_shared<Variable>(nullptr, var);
+        } 
     }
     return nullptr;
 }

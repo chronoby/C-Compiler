@@ -44,6 +44,7 @@ PTR_OP      "->"
 INC_OP      "++"
 DEC_OP      "--"
 AND_OP      "&&"
+AND         "&"
 OR_OP       "||"
 EQ_OP       "=="
 NE_OP       "!="
@@ -100,6 +101,7 @@ STRING      \"(\\.|[^\\"])*\"
 {LE_OP}                     return LE_OP;
 {GE_OP}                     return GE_OP;
 
+{AND}                       return('&');
 {ASSIGN}                    return('=');
 {PLUS}                      return('+');
 {MINUS}                     return('-');
