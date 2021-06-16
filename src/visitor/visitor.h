@@ -71,9 +71,6 @@ public:
     
     int getTmpVarId();
 
-    
-
-
 protected:
     std::unique_ptr<llvm::LLVMContext> context;
     std::unique_ptr<llvm::IRBuilder<> > builder;
@@ -88,6 +85,7 @@ protected:
     std::map<std::string, unsigned>* func_params;
 
     int tmp_var_id = 0;
+    int error = 0;
 };
 
 #endif // VISITOR_H_

@@ -42,21 +42,20 @@ void Visitor::codegenProgram(AstTranslationUnit* root, const char* filename)
 {
     root->codegen(*this);
 
-    // std::cout << "Generate code completed" << std::endl << "LLVM IR:" << std::endl;
+    if (this->error)
+    {
+        std::cerr << "aborted" << std::endl;
+        exit(1);
+    }
+
     std::string llvm_IR;
     llvm::raw_string_ostream OS(llvm_IR);
     OS << *module;
-    // std::cout << "get this line "<< std::endl;
     OS.flush();
-    // std::cout << llvm_IR;
 
     std::ofstream outfile(filename);
     outfile << llvm_IR;
     outfile.close();
-
-    // llvm::PassManager pm;
-    // pm.add(createPrintModulePass(&outs()));
-    // pm.run(*module);
 }
 
 void Visitor::configureTarget()
@@ -74,8 +73,6 @@ int Visitor::getTmpVarId()
 
 std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
 {
-    // TO BE FINISHED
-    // std::cout << "Creating primary expr" << node.value << std::endl;
     llvm::Value* value = nullptr;
     llvm::Value* addr = nullptr;
     
@@ -195,26 +192,23 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
             }
             buf[ptr] =  0;
             
-            // str_content = str_content.substr(1, str_content.length() - 2);
-            
             str_content = std::string(buf);
 
             int content_len = str_content.length();
             if (content_len > 255) {
-                std::cerr << "WARNING: CUT string literal to length of 255" << std::endl;
+                node.warningMsg("String literal is too long. It is cut to length of 255.");
                 str_content = str_content.substr(0, 255);
                 content_len = str_content.size();
             }
 
-            // std::cout << str_content << std::endl;
             llvm::Value* str_mem = this->builder->CreateGlobalStringPtr(str_content, "", 0, &*this->module);
-            // std::cout << str_mem << std::endl;
             value = str_mem;
             break;
         }
         default:
         {
-            std::cerr << "ERROR: Invalid Datatype" << std::endl;
+            node.errorMsg("invalid datatype");
+            this->error = 1;
             return nullptr;
         }
         }
@@ -231,7 +225,6 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
                 auto arg = present_function->getArg(id);
                 value = arg;
                 return std::make_shared<Variable>(value, addr);
-                // return this->builder->CreateLoad(arg->getType(), arg);
             }
         }
 
@@ -242,13 +235,14 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
             if (pair != env->locals.end())
             {
                 addr = pair->second;
-                value = this->builder->CreateLoad(addr);
+                if (this->envs.size() != 1) value = this->builder->CreateLoad(addr);
+                
                 return std::make_shared<Variable>(value, addr);
-                // return this->builder->CreateLoad(var);
             }
             if (i == 0)
             {
-                std::cerr << "ERROR: identifier not defined: " << node.identifier_name << std::endl;
+                node.errorMsg(std::string("identifier not defined: ") + node.identifier_name); 
+                this->error = 1; 
                 return nullptr;
             }
         }
@@ -259,7 +253,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
     }
     default:
     {
-        std::cerr << "ERROR: INVALID AstPrimaryExpr node" << std::endl;
+        node.errorMsg(std::string("invalid primary expression")); 
+        this->error = 1; 
         return nullptr;
     }
     }
@@ -302,7 +297,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
                 }
                 if (i == 0)
                 {
-                    std::cerr << "ERROR: function not found: "<< node.identifier_name << std::endl;
+                    node.errorMsg(std::string("function not found: ") + node.identifier_name); 
+                    this->error = 1; 
                     return nullptr;
                 }
             }
@@ -366,7 +362,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
                 }
                 if (i == 0)
                 {
-                    std::cerr << "ERROR: function not found: "<< node.identifier_name << std::endl;
+                    node.errorMsg(std::string("function not found: ") + node.identifier_name); 
+                    this->error = 1; 
                     return nullptr;
                 }
             }
@@ -408,7 +405,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstUnaryExpr& node)
                 llvm::Value* ptr_value = id->addr;
                 if (ptr_value == nullptr)
                 {
-                    std::cerr << "ERROR: cannot get the address" << std::endl;
+                    node.errorMsg(std::string("cannot get the address of this unary expression")); 
+                    this->error = 1; 
                     return nullptr; 
                 } 
                 return std::make_shared<Variable>(ptr_value, nullptr);
@@ -697,9 +695,24 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAssignmentExpr& node)
         }
         case AstAssignmentExpr::ExprType::ASSIGN:
         {
+            std::shared_ptr<Variable> left = node.unary_expr->codegen(*this);
+            std::shared_ptr<Variable> right = node.assign_expr->codegen(*this);
+
+            if (left == nullptr || left->addr == nullptr)
+            {
+                node.errorMsg("assignment failed: invalid left value");
+                this->error = 1;
+                return nullptr;
+            }
+            if (right == nullptr || right->value == nullptr)
+            {
+                node.errorMsg("assignment failed: invalid right value");
+                this->error = 1;
+                return nullptr;
+            }
             // need update
             // return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
-            auto val = this->builder->CreateStore(node.assign_expr->codegen(*this)->value, node.unary_expr->codegen(*this)->addr, false);
+            auto val = this->builder->CreateStore(right->value, left->addr, false);
             // return std::make_shared<Variable>(node.assign_expr->codegen(*this)->value, nullptr);
             return std::make_shared<Variable>(val, nullptr);
         }
@@ -751,7 +764,8 @@ llvm::Type* Visitor::codegen(const AstTypeSpecifier& node)
         }
         default:
         {
-            std::cerr << "ERROR: invalid data type" << std::endl;
+            node.errorMsg("invalid data type");
+            this->error = 1;
             return nullptr;
         }
     }
@@ -787,7 +801,8 @@ llvm::Type* Visitor::getPointerType(const AstTypeSpecifier& node)
         }
         default:
         {
-            std::cerr << "ERROR: invalid data type" << std::endl;
+            node.errorMsg("invalid data type");
+            this->error = 1;
             return nullptr;
         }
     }
@@ -797,13 +812,15 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
 {
     if (!node.decl_specifiers || node.decl_specifiers->type_specs.size() != 1)
     {
-        std::cerr << "ERROR: invalid declaration specifiers" << std::endl;
+        node.errorMsg("invalid declaration specifiers");
+        this->error = 1;
         return nullptr;
     }
     auto type_spec = node.decl_specifiers->type_specs[0];
     if (!node.init_declarator_list)
     {
-        std::cerr << "ERROR: invalid init declarators" << std::endl;
+        node.errorMsg("invalid init declarators");
+        this->error = 1;
         return nullptr;
     }
     auto init_declarators = node.init_declarator_list->init_declarators;
@@ -851,24 +868,24 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
         llvm::Constant* initializer_v = llvm::ConstantAggregateZero::get(var_type);
         if (envs.size() == 1)
         {
-            if (initializer)
+            if (initializer != nullptr)
             {
-                auto initializer_value = initializer->codegen(*this)->value;
-                    
-                if (llvm::isa<llvm::Constant>(initializer_value))
+                auto initializer_value = initializer->codegen(*this);
+
+                if (initializer_value!= nullptr && initializer_value->value != nullptr && llvm::isa<llvm::Constant>(initializer_value->value))
                 {
-                    initializer_v = llvm::cast<llvm::Constant>(initializer_value);
+                    initializer_v = llvm::cast<llvm::Constant>(initializer_value->value);
                 }
                 else
                 {
-                    std::cerr << "ERROR: global variables must be initialized with constants" << std::endl;
-                    std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
+                    node.warningMsg(std::string("global variable") + var_name + "has invalid initializer. It will be initialized with zero");
                 }
             }
             LocalEnv* present_env = envs[0];
             if (present_env->locals.find(var_name) != present_env->locals.end())
             {
-                std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
+                node.errorMsg(std::string("variable redeclaration") + var_name);
+                this->error = 1;
                 return nullptr;
             }
 
@@ -890,7 +907,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
             LocalEnv* present_env = envs.back();
             if (present_env->locals.find(var_name) != present_env->locals.end())
             {
-                std::cerr << "ERROR: variable redeclaration: " << var_name << std::endl; 
+                node.errorMsg(std::string("variable redeclaration") + var_name);
+                this->error = 1;
                 return nullptr;
             }
 

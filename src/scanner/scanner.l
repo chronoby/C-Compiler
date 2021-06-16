@@ -1,7 +1,13 @@
+%option yylineno
 %{
 #include <string>
 #include "../ast/ast.h"
 #include "../parser/parser.hpp"
+int yycolumn = 1;
+#define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
+                       yylloc.first_column = yycolumn; yylloc.last_column = yycolumn + yyleng - 1; \
+                       yycolumn += yyleng;
+
 #define SAVE_TOKEN yylval.string = new std::string(yytext, yyleng)
 #define TOKEN(t) (yylval.token = t)
 extern "C" int yywrap() { }
@@ -72,13 +78,14 @@ STRING      \"(\\.|[^\\"])*\"
 
 <INITIAL>"/*"               {BEGIN COMMENT;}
 <COMMENT>"*/"               {BEGIN INITIAL;}
-<COMMENT>.|\n               {;}
+<COMMENT>.                  {;}
+<COMMENT>\n                 {yycolumn = 1;}
 <INITIAL>"//"               {BEGIN COMMENT2;}
-<COMMENT2>\n                {BEGIN INITIAL;}
+<COMMENT2>\n                {yycolumn = 1; BEGIN INITIAL;}
 <COMMENT2>.                 {;}
 
 <INITIAL>{WS}                        ;
-<INITIAL>{NEWLINE}                   ;
+<INITIAL>{NEWLINE}                   yycolumn = 1;
 <INITIAL>{VOID}                      SAVE_TOKEN; return VOID;
 <INITIAL>{TYPE_INT}			         SAVE_TOKEN; return TYPE_INT;
 <INITIAL>{TYPE_LONG}                 SAVE_TOKEN; return TYPE_LONG;

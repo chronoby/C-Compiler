@@ -1,5 +1,20 @@
+#include <iostream>
 #include "ast.h"
 #include "../visitor/visitor.h"
+
+void PosEntity::errorMsg(std::string msg) const
+{
+    std::cerr << "\033[31merror: \033[0mat line " << this->line << ", column " << this->column
+              << ": " << msg
+              << std::endl;
+}
+
+void PosEntity::warningMsg(std::string msg) const
+{
+    std::cerr << "\033[33mwarning: \033[0mat line " << this->line << ", column " << this->column
+              << ": " << msg
+              << std::endl;
+}
 
 // --------------------------- expression -------------------------
 

@@ -1,5 +1,8 @@
 int arr1[10];
 
+int x = 10;
+int y = x;
+
 int main()
 {
     int arr2[10];
