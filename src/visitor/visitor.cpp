@@ -1050,6 +1050,9 @@ std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
         llvm::BasicBlock* loop_block = llvm::BasicBlock::Create(*context, "loop", parent_function);
         llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*context, "loopin", parent_function);
         llvm::BasicBlock* cont_block = llvm::BasicBlock::Create(*context, "loopcont");
+        tmp_loop_block = loop_block;
+        tmp_cont_block = cont_block;
+
         builder->CreateBr(loop_block);
         builder->SetInsertPoint(loop_block);
         
@@ -1074,6 +1077,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
         // cont block
         parent_function->getBasicBlockList().push_back(cont_block);
         builder->SetInsertPoint(cont_block);
+        tmp_loop_block = nullptr;
+        tmp_cont_block = nullptr;
         return true_class;
     }
 }
@@ -1214,6 +1219,21 @@ std::shared_ptr<Variable> Visitor::codegen(const AstJumpStmt& node)
     {
         llvm::Value* ret = node.expr->codegen(*this)->value;
         this->builder->CreateRet(ret);
+        break;
+    }
+    case AstJumpStmt::StmtType::CONTINUE:
+    {
+        builder->CreateBr(tmp_loop_block);
+        llvm::BasicBlock* block = llvm::BasicBlock::Create(*context);
+        builder->SetInsertPoint(block);
+        break;
+    }
+    case AstJumpStmt::StmtType::BREAK:
+    {
+        builder->CreateBr(tmp_cont_block);
+        llvm::BasicBlock* block = llvm::BasicBlock::Create(*context);
+        builder->SetInsertPoint(block);
+
         break;
     }
     default:

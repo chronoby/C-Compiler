@@ -110,7 +110,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
 %token PTR_OP INC_OP DEC_OP AND_OP OR_OP EQ_OP NE_OP LE_OP GE_OP ELLIPSIS
 %token RETURN
-%token SIZEOF IF ELSE WHILE
+%token SIZEOF IF ELSE WHILE CONTINUE BREAK
 
 %start translation_unit
 %%
@@ -386,6 +386,8 @@ expr_stmt :
 jump_stmt :
     RETURN ';' { $$ = new AstJumpStmt(AstJumpStmt::StmtType::RETURN); }
     | RETURN expr ';' { $$ = new AstJumpStmt($2); }
+    | CONTINUE ';' { $$ = new AstJumpStmt(AstJumpStmt::StmtType::CONTINUE); }
+    | BREAK ';' { $$ = new AstJumpStmt(AstJumpStmt::StmtType::BREAK); }
     ;
 
 translation_unit : 

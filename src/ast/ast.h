@@ -683,7 +683,7 @@ public:
 class AstJumpStmt : public AstNode
 {
 public:
-    enum class StmtType {RETURN, RETURN_VALUE};
+    enum class StmtType {RETURN, RETURN_VALUE, CONTINUE, BREAK};
     StmtType stmt_type;
     AstExpr* expr;
 

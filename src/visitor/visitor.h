@@ -88,6 +88,9 @@ protected:
     std::map<std::string, unsigned>* func_params;
 
     int tmp_var_id = 0;
+
+    llvm::BasicBlock* tmp_loop_block;
+    llvm::BasicBlock* tmp_cont_block;
 };
 
 #endif // VISITOR_H_

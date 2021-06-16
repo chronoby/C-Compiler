@@ -26,6 +26,8 @@ RETURN      "return"
 IF          "if"
 ELSE        "else"
 WHILE       "while"
+CONTINUE    "continue"
+BREAK       "break"
 IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
 
 ASSIGN      "="
@@ -91,6 +93,8 @@ STRING      \"(\\.|[^\\"])*\"
 <INITIAL>{IF}                        SAVE_TOKEN; return IF;
 <INITIAL>{ELSE}                      SAVE_TOKEN; return ELSE;
 <INITIAL>{WHILE}                     SAVE_TOKEN; return WHILE;
+<INITIAL>{CONTINUE}                  SAVE_TOKEN; return CONTINUE;
+<INITIAL>{BREAK}                     SAVE_TOKEN; return BREAK;
 <INITIAL>{SIZEOF}                    SAVE_TOKEN; return SIZEOF;
 <INITIAL>{RETURN}                    SAVE_TOKEN; return RETURN;
 
