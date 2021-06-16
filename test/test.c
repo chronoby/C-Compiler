@@ -1,11 +1,11 @@
-int* parr[10];
+int parr[10];
 
 int x = 10;
 
 int main()
 {
-    parr[0] = &x;
-    printf("%d\n", *(parr[0]));    
+    int** px = parr;
+    parr[2] = 2;
 
     return 0;
 }

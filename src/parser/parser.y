@@ -135,7 +135,6 @@ postfix_expr :
     primary_expr { $$ = new AstPostfixExpr($1); SETPOS($$);}
     | postfix_expr '[' expr ']' { $$ = new AstPostfixExpr($1, $3); SETPOS($$);}
 
-    /* | postfix_expr '[' expression ']' */ 
     | postfix_expr '(' ')' { 
         $$ = $1; 
         $$->setExprType(AstPostfixExpr::ExprType::FUNC);
