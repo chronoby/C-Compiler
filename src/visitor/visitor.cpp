@@ -1331,12 +1331,16 @@ std::shared_ptr<Variable> Visitor::codegen(const AstJumpStmt& node)
     case AstJumpStmt::StmtType::RETURN:
     {
         this->builder->CreateRetVoid();
+        llvm::BasicBlock* block = llvm::BasicBlock::Create(*context);
+        builder->SetInsertPoint(block);
         break;
     }
     case AstJumpStmt::StmtType::RETURN_VALUE:
     {
         llvm::Value* ret = node.expr->codegen(*this)->value;
         this->builder->CreateRet(ret);
+        llvm::BasicBlock* block = llvm::BasicBlock::Create(*context);
+        builder->SetInsertPoint(block);
         break;
     }
     case AstJumpStmt::StmtType::CONTINUE:
