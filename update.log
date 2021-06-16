@@ -87,3 +87,9 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 * Add fdiv, now support 
     * int / int, double / double
     * int / double, double / int(int will be cast to double)
+
+------
+
+2021-06-16 wyq:
+* 删除了部分debug输出
+* 添加注释功能（//和/**/)

@@ -8,18 +8,18 @@ int main()
     double **ppa = &pa;
     double ***pppa = &ppa;
 
-    int x = (15 + 4) * 9;
+    /* int x = (15 + 4) * 9;
 
     printf("%lf\n", ***pppa);
-    printf("%lf\n", *&*&a);
-    printf("%lf\n", *&*pa);
+    // printf("%lf\n", *&*&a);
+    printf("%lf\n", *&*pa); */
 
     if (&(**ppa) == pa)
     {
         printf("they are equal\n");
     }
 
-    printf("%d\n", x);
+    // printf("%d\n", x);
 
     return 0;
 }
