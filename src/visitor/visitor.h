@@ -71,9 +71,6 @@ public:
     
     int getTmpVarId();
 
-    
-
-
 protected:
     std::unique_ptr<llvm::LLVMContext> context;
     std::unique_ptr<llvm::IRBuilder<> > builder;
@@ -91,6 +88,7 @@ protected:
 
     llvm::BasicBlock* tmp_loop_block;
     llvm::BasicBlock* tmp_cont_block;
+    int error = 0;
 };
 
 #endif // VISITOR_H_

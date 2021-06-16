@@ -10,6 +10,18 @@
 class Visitor;
 class Variable;
 
+class PosEntity
+{
+private:
+    int line;
+    int column;
+public:
+    PosEntity(): line(0), column(0) {}
+    void setPosition(int l, int c) {line = l; column = c;}
+    void errorMsg(std::string msg) const;
+    void warningMsg(std::string msg) const;
+};
+
 class AstNode
 {
 public:
@@ -70,7 +82,7 @@ class AstFunctionDef;
 
 // --------------------------- expression -------------------------
 
-class AstArgumentExprList // : public AstExpression
+class AstArgumentExprList : public PosEntity // : public AstExpression
 {
 public:
     std::vector<AstAssignmentExpr*> expr_list;
@@ -79,7 +91,7 @@ public:
 };
 
 // Type for primary_expr
-class AstPrimaryExpr : public AstExpression
+class AstPrimaryExpr : public AstExpression, public PosEntity
 {
 public:
     // which grammar rule is used to derive this node
@@ -110,7 +122,7 @@ public:
 };
 
 // NOTE: TO BE FINISHED
-class AstPostfixExpr : public AstExpression
+class AstPostfixExpr : public AstExpression, public PosEntity
 {
 public:
     // which grammar rule is used to derive this node
@@ -142,7 +154,7 @@ public:
     std::string identifier_name;
 };
 
-class AstUnaryExpr : public AstExpression
+class AstUnaryExpr : public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {POSTFIX, OP, UNARY_OP, CAST, SIZEOF_TYPE, SIZEOF_EXPR};
@@ -162,7 +174,7 @@ public:
     OpType op_type;
 };
 
-class AstUnaryOp
+class AstUnaryOp : public PosEntity
 {
 public:
     enum class OpType
@@ -179,7 +191,7 @@ public:
     AstUnaryOp(OpType t): type(t) {}
 };
 
-class AstCastExpr: public AstExpression
+class AstCastExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {UNARY, CAST};
@@ -193,7 +205,7 @@ public:
     AstCastExpr* cast_expr;
 };
 
-class AstMultiplicativeExpr: public AstExpression
+class AstMultiplicativeExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {CAST, OP};
@@ -211,7 +223,7 @@ public:
     AstMultiplicativeExpr* multi_expr;
 };
 
-class AstAdditiveExpr: public AstExpression
+class AstAdditiveExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {MULTI, OP};
@@ -229,7 +241,7 @@ public:
     AstAdditiveExpr* add_expr;
 };
 
-class AstShiftExpr: public AstExpression
+class AstShiftExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {ADD, OP};
@@ -243,7 +255,7 @@ public:
     AstAdditiveExpr* add_expr;
 };
 
-class AstRelationalExpr: public AstExpression
+class AstRelationalExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {SHIFT, OP};
@@ -261,7 +273,7 @@ public:
     AstRelationalExpr* rela_expr;
 };
 
-class AstEqualityExpr: public AstExpression
+class AstEqualityExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {RELATIONAL, OP};
@@ -279,7 +291,7 @@ public:
     AstEqualityExpr* equal_expr;
 };
 
-class AstAndExpr: public AstExpression
+class AstAndExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {EQUALITY, OP};
@@ -292,7 +304,7 @@ public:
     AstEqualityExpr* equal_expr;
 };
 
-class AstExclusiveExpr: public AstExpression
+class AstExclusiveExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {AND, OP};
@@ -305,7 +317,7 @@ public:
     AstAndExpr* and_expr;
 };
 
-class AstInclusiveExpr: public AstExpression
+class AstInclusiveExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {EXCLUSIVE, OP};
@@ -317,7 +329,7 @@ public:
     AstExclusiveExpr* exclusive_expr;
 };
 
-class AstLogicalAndExpr: public AstExpression
+class AstLogicalAndExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {INCLUSIVE, OP};
@@ -332,7 +344,7 @@ public:
     AstLogicalAndExpr* and_expr;
 };
 
-class AstLogicalOrExpr: public AstExpression
+class AstLogicalOrExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {LOG_AND, OP};
@@ -348,7 +360,7 @@ public:
     AstLogicalOrExpr* or_expr;
 };
 
-class AstConditionalExpr: public AstExpression
+class AstConditionalExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {LOG_OR, OP};
@@ -361,7 +373,7 @@ public:
     AstLogicalOrExpr* or_expr;
 };
 
-class AstAssignmentExpr: public AstExpression
+class AstAssignmentExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {CONDITIONAL, ASSIGN};
@@ -378,7 +390,7 @@ public:
     AstAssignmentExpr* assign_expr;
 };
 
-class AstExpr: public AstExpression
+class AstExpr: public AstExpression, public PosEntity
 {
 public:
     enum class ExprType {ASSIGN, OP};
@@ -394,7 +406,7 @@ public:
 // ---------------------- DECLRATION ---------------------------
 
 // create variables here
-class AstDecl  : public AstStatement
+class AstDecl  : public AstStatement, public PosEntity
 {
 public:
     AstDeclSpecifiers* decl_specifiers;
@@ -406,7 +418,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstDeclSpecifiers : public AstNode
+class AstDeclSpecifiers : public AstNode, public PosEntity
 {
 public:
     std::vector<AstStorageClassSpecifier*> stor_specs;
@@ -424,7 +436,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstInitDeclaratorList // : public AstNode
+class AstInitDeclaratorList : public PosEntity // : public AstNode
 {
 public:
     std::vector<AstInitDeclarator* > init_declarators;
@@ -433,7 +445,7 @@ public:
     void add_decl(AstInitDeclarator* decl) { this->init_declarators.push_back(decl); }
 };
 
-class AstInitDeclarator // : public AstNode
+class AstInitDeclarator : public PosEntity // : public AstNode
 {
 public:
     AstDeclarator* declarator;
@@ -443,12 +455,12 @@ public:
     AstInitDeclarator(AstDeclarator* decl, AstInitializer* init): declarator(decl), initializer(init) {}   
 };
 
-class AstStorageClassSpecifier // : public AstNode
+class AstStorageClassSpecifier : public PosEntity // : public AstNode
 {
     // temporarily not used
 };
 
-class AstTypeSpecifier
+class AstTypeSpecifier : public PosEntity
 {
 public:
     enum class Type {
@@ -492,14 +504,14 @@ public:
     llvm::Type* codegen(Visitor& visitor);
 };
 
-class AstTypeQualifier //  : public AstNode
+class AstTypeQualifier : public PosEntity //  : public AstNode
 {
 public:
     // temporarily not used
     std::string qualifier;
 };
 
-class AstDeclarator // : public AstNode
+class AstDeclarator : public PosEntity // : public AstNode
 {
 public:
     // pointer is not supported now
@@ -513,7 +525,7 @@ public:
     AstDeclarator(AstPointer* pointer, AstDirectDeclarator* direct_declarator): pointer(pointer), direct_declarator(direct_declarator), declarator_type(DeclaratorType::POINTER) {}
 };
 
-class AstDirectDeclarator // : public AstNode
+class AstDirectDeclarator : public PosEntity // : public AstNode
 {
 public:
     enum class DeclaratorType {ID, PR, BR, BR_EMPTY, FUNC_PARAM, FUNC_ID, FUNC_EMPTY};
@@ -526,7 +538,7 @@ public:
     void setType(DeclaratorType type) { this->declarator_type = type; }
 };
 
-class AstPointer
+class AstPointer : public PosEntity
 {
 public:
     // TODO: ADD CONST IF AVALABLE
@@ -542,7 +554,7 @@ class AstTypeQualifierList
 
 };
 
-class AstParameterTypeList
+class AstParameterTypeList : public PosEntity
 {
 public:
     AstParameterList* param_list;
@@ -551,7 +563,7 @@ public:
     AstParameterTypeList(AstParameterList* list, bool isVarArg): param_list(list), isVarArg(isVarArg) {};
 };
 
-class AstParameterList
+class AstParameterList : public PosEntity
 {
 public:
     std::vector<AstParameterDecl*> parameter_list;
@@ -560,7 +572,7 @@ public:
     void add_param_decl(AstParameterDecl* parameter_decl) { parameter_list.push_back(parameter_decl); }
 };
 
-class AstParameterDecl
+class AstParameterDecl : public PosEntity
 {
 public:
     AstDeclSpecifiers* decl_specifiers;
@@ -572,12 +584,12 @@ public:
     AstParameterDecl(AstDeclSpecifiers* decl_specs) : decl_specifiers(decl_specs), declarator(nullptr), abstract_declarator(nullptr) {}
 };
 
-class AstAbstractDeclarator
+class AstAbstractDeclarator : public PosEntity
 {
 public:
 };
 
-class AstInitializer : public AstNode
+class AstInitializer : public AstNode , public PosEntity
 {
 public:
     enum class InitType {ASSIGN, LIST};
@@ -601,7 +613,7 @@ public:
 
 };
 
-class AstStmt : public AstNode
+class AstStmt : public AstNode , public PosEntity
 {
 public:
     enum class StmtType {LABELED, COMPOUND, EXPR, SELECT, ITER, JUMP};
@@ -620,7 +632,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstCompoundStmt : public AstStatement
+class AstCompoundStmt : public AstStatement , public PosEntity
 {
 public:
     AstStmtList* stmt_list;
@@ -634,7 +646,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor);
 };
 
-class AstSelectionStmt : public AstStatement
+class AstSelectionStmt : public AstStatement, public PosEntity
 {
 public:
     enum class StmtType {IF, IF_ELSE};
@@ -650,7 +662,7 @@ public:
     AstStmt* stmt2;
 };
 
-class AstIterStmt : public AstStatement
+class AstIterStmt : public AstStatement, public PosEntity
 {
 public:
     enum class StmtType {WHILE, FOR, DO_WHILE};
@@ -663,7 +675,7 @@ public:
     AstStmt* stmt;
 };
 
-class AstDeclList: public AstNode
+class AstDeclList: public AstNode, public PosEntity
 {
 public:
     std::vector<AstDecl*> decls;
@@ -674,7 +686,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstStmtList : public AstNode
+class AstStmtList : public AstNode, public PosEntity
 {
 public:
     std::vector<AstStmt*> stmts;
@@ -685,7 +697,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstExprStmt  : public AstNode
+class AstExprStmt  : public AstNode, public PosEntity
 {
 public:
     AstExpr* expr;
@@ -695,7 +707,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstJumpStmt : public AstNode
+class AstJumpStmt : public AstNode, public PosEntity
 {
 public:
     enum class StmtType {RETURN, RETURN_VALUE, CONTINUE, BREAK};
@@ -708,7 +720,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstTranslationUnit : public AstNode
+class AstTranslationUnit : public AstNode, public PosEntity
 {
 public:
     std::vector<AstExternDecl*> external_decl_list;
@@ -719,7 +731,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstExternDecl : public AstStatement
+class AstExternDecl : public AstStatement, public PosEntity
 {
 public:
     enum class DeclType {VAR, FUNC};
@@ -734,7 +746,7 @@ public:
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
 };
 
-class AstFunctionDef : public AstStatement
+class AstFunctionDef : public AstStatement, public PosEntity
 {
 public:
     AstDeclSpecifiers* decl_specifiers;
