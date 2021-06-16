@@ -279,6 +279,10 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
             auto val = builder->CreateLoad(addr);
             return std::make_shared<Variable>(val, addr);
         }
+        case AstPostfixExpr::ExprType::OP:
+        {
+            
+        }
         // case AstPostfixExpr::ExprType::OP:
         // {
         //     return node.primary_expr->codegen(*this);
@@ -314,15 +318,37 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
             static llvm::Function* scanf_func = nullptr;
             static llvm::Function* printf_func = nullptr;
 
-            // if (node.identifier_name == "scanf")
-            // {
-            //     std::vector<llvm::Type*> arg_types = { llvm::Type::getInt8PtrTy(this->context) };
-            //     func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(this->context), arg_types, true);
-            //     func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "scanf", &*(this->module));
-            //     func->setCallingConv(llvm::CallingConv::C);
+            if (node.identifier_name == "scanf")
+            {
+                if (scanf_func == nullptr)
+                {
+                    std::vector<llvm::Type*> arg_types = { llvm::Type::getInt8PtrTy(*context) };
+                    func_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context), arg_types, true);
+                    func = llvm::Function::Create(func_type, llvm::Function::ExternalLinkage, "scanf", &*(this->module));
+                    func->setCallingConv(llvm::CallingConv::C);
+                    scanf_func = func;
+                }
+                std::vector<llvm::Value*> scanf_args;
 
-            // }
-            if (node.identifier_name == "printf")
+                auto expr_list = node.argument_expr_list;
+                if (expr_list)
+                {
+                    for (auto expr : expr_list->expr_list)
+                    {
+                        auto arg = expr->codegen(*this);
+                        if (arg) scanf_args.push_back(arg->value);
+                        else 
+                        {
+                            node.errorMsg("invalid function arg");
+                            this->error=1;
+                        }
+                    }
+                }
+
+                llvm::Value* ret = this->builder->CreateCall(scanf_func, scanf_args, "scanf_call");
+                return std::make_shared<Variable>(ret, nullptr);
+            }
+            else if (node.identifier_name == "printf")
             {
                 if (printf_func == nullptr)
                 {
@@ -340,8 +366,13 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
                 {
                     for (auto expr : expr_list->expr_list)
                     {
-                        auto arg = expr->codegen(*this)->value;
-                        printf_args.push_back(arg);
+                        auto arg = expr->codegen(*this);
+                        if (arg) printf_args.push_back(arg->value);
+                        else 
+                        {
+                            node.errorMsg("invalid function arg");
+                            this->error=1;
+                        }
                     }
                 }
 
@@ -373,10 +404,15 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
             {
                 for (auto expr : expr_list->expr_list)
                 {
-                    auto arg = expr->codegen(*this)->value;
+                    auto arg = expr->codegen(*this);
                     // auto copied_arg = this->builder->CreateAlloca(arg->getType(), nullptr, std::string("tmp_var_") + std::to_string(this->getTmpVarId()));
                     // TODO: add type check
-                    args.push_back(arg);
+                    if (arg) args.push_back(arg->value);
+                    else 
+                    {
+                        node.errorMsg("invalid function arg");
+                        this->error=1;
+                    }
                 }
             }
             llvm::Value* ret = this->builder->CreateCall(func, args);
