@@ -281,12 +281,28 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
         }
         case AstPostfixExpr::ExprType::OP:
         {
+            auto post_value = node.postfix_expr->codegen(*this);
+            llvm::Value* value = post_value->value;
             
+            llvm::ConstantInt* one = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), 1, true);
+            llvm::Value* res = nullptr;
+            if (node.op_type == AstPostfixExpr::OpType::INC)
+            {
+                res = this->builder->CreateAdd(value, one);
+            }
+            else if (node.op_type == AstPostfixExpr::OpType::DEC)
+            {
+                res = this->builder->CreateSub(value, one);
+            }
+            if (post_value->addr == nullptr)
+            {
+                node.errorMsg("invalid left value");
+                this->error=1;
+                return nullptr;
+            }
+            this->builder->CreateStore(res, post_value->addr);
+            return std::make_shared<Variable>(value, nullptr);
         }
-        // case AstPostfixExpr::ExprType::OP:
-        // {
-        //     return node.primary_expr->codegen(*this);
-        // }
         case AstPostfixExpr::ExprType::FUNC:
         {
             llvm::Function* func = nullptr;
@@ -473,6 +489,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstCastExpr& node)
         {
             return node.unary_expr->codegen(*this);
         }
+        
     }
     return nullptr;
 }
@@ -1268,9 +1285,9 @@ std::shared_ptr<Variable> Visitor::codegen(const AstFunctionDef& node)
     this->present_function = function;
     this->func_params = new_param;
 
-    node.compound_stmt->codegen(*this);
     this->envs.back()->functions.insert({direct_declarator->id_name, function});
     this->envs.back()->function_types.insert({direct_declarator->id_name, func_type});
+    node.compound_stmt->codegen(*this);
     this->present_function = old_function;
     delete this->func_params;
     this->func_params = old_function_params;

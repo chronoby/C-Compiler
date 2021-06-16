@@ -152,13 +152,13 @@ postfix_expr :
     /*| postfix_expr '.' IDENTIFIER
     | postfix_expr PTR_OP IDENTIFIER */
     | postfix_expr INC_OP { 
-        $$ = $1;
+        $$ = new AstPostfixExpr($1);
         $$->setExprType(AstPostfixExpr::ExprType::OP);
         $$->setOpType(AstPostfixExpr::OpType::INC);
         SETPOS($$);
     }
     | postfix_expr DEC_OP { 
-        $$ = $1;
+        $$ = new AstPostfixExpr($1);
         $$->setExprType(AstPostfixExpr::ExprType::OP);
         $$->setOpType(AstPostfixExpr::OpType::DEC);
         SETPOS($$);

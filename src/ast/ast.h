@@ -136,6 +136,7 @@ public:
     AstPostfixExpr(AstPostfixExpr* expr, AstExpr* ind): postfix_expr(expr), expr(ind), expr_type(ExprType::IDX) { }
     // AstPostfixExpr(AstPostfixExpr* expr, OpType op): postfix_expr(expr), op_type(op), expr_type(ExprType::OP) { }
     // AstPostfixExpr(AstPostfixExpr* expr, ExprType expr_type): postfix_expr(expr), expr_type(expr_type) {}
+    AstPostfixExpr(AstPostfixExpr* expr): postfix_expr(expr) {}
     void setExprType(ExprType expr_type) { this->expr_type = expr_type; }
     void setOpType(OpType op_type) { this->op_type = op_type; }
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
