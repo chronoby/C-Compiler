@@ -20,5 +20,5 @@ $(PARSER_HEAD): $(PARSER)
 $(SCANNER): $(SCANNER_SOURCE) $(PARSER_HEAD)
 	lex -o $@ $^
 
-$(TARGET):  $(SCANNER) $(PARSER)
+$(TARGET):  $(SCANNER) $(PARSER) $(SRC)
 	$(CXX) $(CXXFLAGS) $@ $(SCANNER) $(PARSER) $(SRC) `llvm-config --cxxflags --ldflags --system-libs --libs core mcjit native` -w -DLLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING=1 

@@ -55,6 +55,7 @@ class AstParameterList;
 class AstParameterDecl;
 class AstAbstractDeclarator;
 class AstInitializer;
+class AstInitializerList;
 class AstStmt;
 class AstCompoundStmt;
 class AstSelectionStmt;
@@ -579,11 +580,25 @@ public:
 class AstInitializer : public AstNode
 {
 public:
-    AstAssignmentExpr* assignment_expr;
+    enum class InitType {ASSIGN, LIST};
 
-    AstInitializer(AstAssignmentExpr* expr): assignment_expr(expr) {}
+    AstAssignmentExpr* assignment_expr;
+    AstInitializerList* initializer_list;
+    InitType init_type;
+
+    AstInitializer(AstAssignmentExpr* expr): assignment_expr(expr), init_type(InitType::ASSIGN) {}
+    AstInitializer(AstInitializerList* expr): initializer_list(expr), init_type(InitType::LIST) {}
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;    
+};
+
+class AstInitializerList// : public AstNode
+{
+public:
+    std::vector<AstInitializer *> initializer_list;
+
+    AstInitializerList(AstInitializer* expr) { initializer_list.push_back(expr); }
+
 };
 
 class AstStmt : public AstNode

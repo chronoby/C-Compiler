@@ -833,8 +833,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
                     }
                 }
                 // get array type
-                var_type = type_spec->codegen(*this);
-                var_type = llvm::ArrayType::get(var_type, num);
+                auto element_type = type_spec->codegen(*this);
+                var_type = llvm::ArrayType::get(element_type, num);
             }
         }
         else if (declarator->declarator_type == AstDeclarator::DeclaratorType::POINTER)
@@ -853,17 +853,31 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
         {
             if (initializer)
             {
-                auto initializer_value = initializer->codegen(*this)->value;
-                    
-                if (llvm::isa<llvm::Constant>(initializer_value))
+                if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::ID)
                 {
-                    initializer_v = llvm::cast<llvm::Constant>(initializer_value);
+                    auto initializer_value = initializer->codegen(*this)->value;
+                
+                    if (llvm::isa<llvm::Constant>(initializer_value))
+                    {
+                        initializer_v = llvm::cast<llvm::Constant>(initializer_value);
+                    }
+                    else
+                    {
+                        std::cerr << "ERROR: global variables must be initialized with constants" << std::endl;
+                        std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
+                    }
                 }
-                else
+                else if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::BR)
                 {
-                    std::cerr << "ERROR: global variables must be initialized with constants" << std::endl;
-                    std::cerr << "initialize global variable " << var_name << "with zero" << std::endl; 
+                    std::vector<llvm::Constant*> values;
+                    for(auto init : initializer->initializer_list->initializer_list)
+                    {
+                        auto value = init->codegen(*this)->value;
+                        values.push_back(llvm::dyn_cast<llvm::Constant>(value));
+                    }
+                    initializer_v = llvm::ConstantArray::get(llvm::dyn_cast<llvm::ArrayType>(var_type), values);
                 }
+
             }
             LocalEnv* present_env = envs[0];
             if (present_env->locals.find(var_name) != present_env->locals.end())
@@ -895,11 +909,26 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
             }
 
             llvm::AllocaInst* var = this->builder->CreateAlloca(var_type, nullptr, var_name);
-
             if (initializer)
             {
-                auto initializer_value = initializer->codegen(*this)->value;
-                llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
+                if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::ID)
+                {
+                    auto initializer_value = initializer->codegen(*this)->value;
+                    llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
+                }
+                else if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::BR)
+                {
+                    std::vector<llvm::Constant*> values;
+                    
+                    for(auto init : initializer->initializer_list->initializer_list)
+                    {
+                        auto value = init->codegen(*this)->value;
+                        values.push_back(llvm::dyn_cast<llvm::Constant>(value));
+                    }
+                    auto initializer_value = llvm::ConstantArray::get(llvm::dyn_cast<llvm::ArrayType>(var_type), values);
+                    llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
+                }
+                
             }
 
             present_env->locals.insert({var_name, var});

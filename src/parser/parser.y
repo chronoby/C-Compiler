@@ -38,6 +38,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
     AstInitDeclaratorList* init_declarator_list;
     AstInitDeclarator* init_declarator;
     AstInitializer* initializer;
+    AstInitializerList* initializer_list;
     AstDeclarator* declarator;
     AstDirectDeclarator* direct_declarator;
 
@@ -85,6 +86,7 @@ void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %type<init_declarator_list> init_declarator_list
 %type<init_declarator> init_declarator
 %type<initializer> initializer
+%type<initializer_list> initializer_list
 %type<declarator> declarator
 %type<direct_declarator> direct_declarator
 %type<type_specifier> type_specifier;
@@ -336,9 +338,13 @@ parameter_decl :
 
 initializer :
     assignment_expr { $$ = new AstInitializer($1); }
-	/* | '{' initializer_list '}' */
+	| '{' initializer_list '}' { $$ = new AstInitializer($2); }
 	/* | '{' initializer_list ',' '}' */
 	;
+
+initializer_list :
+    initializer { $$ = new AstInitializerList($1); }
+	| initializer_list ',' initializer { $$ = $1; $$->initializer_list.push_back($3); }
 
 stmt :
     /* labeled_stmt
