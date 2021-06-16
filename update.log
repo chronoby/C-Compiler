@@ -93,3 +93,5 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 2021-06-16 wyq:
 * 删除了部分debug输出
 * 添加注释功能（//和/**/)
+* 增加了报错和警告
+* 修正了指针和数组的顺序
