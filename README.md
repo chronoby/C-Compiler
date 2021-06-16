@@ -31,6 +31,8 @@ the `test.sh` file is no longer useful.
 - `*` `/` `%`
 - `==` `!=` `<` `>` `<=` `>=`
 - `&&` `||`
+- `++` `--`
+
 
 ## Commit
 
