@@ -446,7 +446,30 @@ std::shared_ptr<Variable> Visitor::codegen(const AstUnaryExpr& node)
         {
             return node.postfix_expr->codegen(*this);
         }
-
+        case AstUnaryExpr::ExprType::OP:
+        {
+            auto unary_value = node.unary_expr->codegen(*this);
+            llvm::Value* value = unary_value->value;
+            
+            llvm::ConstantInt* one = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), 1, true);
+            llvm::Value* res = nullptr;
+            if (node.op_type == AstUnaryExpr::OpType::INC)
+            {
+                res = this->builder->CreateAdd(value, one);
+            }
+            else if (node.op_type == AstUnaryExpr::OpType::DEC)
+            {
+                res = this->builder->CreateSub(value, one);
+            }
+            if (unary_value->addr == nullptr)
+            {
+                node.errorMsg("invalid left value");
+                this->error=1;
+                return nullptr;
+            }
+            this->builder->CreateStore(res, unary_value->addr);
+            return std::make_shared<Variable>(res, nullptr);
+        }
         case AstUnaryExpr::ExprType::UNARY_OP:
         {
             switch (node.unary_op->type)

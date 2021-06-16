@@ -172,8 +172,8 @@ argument_expr_list :
 
 unary_expr : 
     postfix_expr { $$ = new AstUnaryExpr($1); SETPOS($$); }
-	| INC_OP unary_expr
-	| DEC_OP unary_expr
+	| INC_OP unary_expr { $$ = new AstUnaryExpr($2, AstUnaryExpr::OpType::INC); SETPOS($$); }
+	| DEC_OP unary_expr { $$ = new AstUnaryExpr($2, AstUnaryExpr::OpType::DEC); SETPOS($$); }
 	| unary_op cast_expr { $$ = new AstUnaryExpr($2, $1); SETPOS($$); }
 	| SIZEOF unary_expr
 	/* | SIZEOF '(' type_name ')' */

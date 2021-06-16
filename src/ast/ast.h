@@ -162,6 +162,7 @@ public:
     enum class OpType {INC, DEC};
 
     AstUnaryExpr(AstPostfixExpr* expr): postfix_expr(expr), expr_type(ExprType::POSTFIX) { }
+    AstUnaryExpr(AstUnaryExpr* expr, AstUnaryExpr::OpType type): unary_expr(expr), expr_type(ExprType::OP), op_type(type) { }
     AstUnaryExpr(AstCastExpr* expr, AstUnaryOp* unary_op): cast_expr(expr), unary_op(unary_op), expr_type(ExprType::UNARY_OP) { }
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
