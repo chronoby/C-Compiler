@@ -43,6 +43,7 @@ void yyerror(const char *s) {
     AstInitDeclaratorList* init_declarator_list;
     AstInitDeclarator* init_declarator;
     AstInitializer* initializer;
+    AstInitializerList* initializer_list;
     AstDeclarator* declarator;
     AstDirectDeclarator* direct_declarator;
 
@@ -90,6 +91,7 @@ void yyerror(const char *s) {
 %type<init_declarator_list> init_declarator_list
 %type<init_declarator> init_declarator
 %type<initializer> initializer
+%type<initializer_list> initializer_list
 %type<declarator> declarator
 %type<direct_declarator> direct_declarator
 %type<type_specifier> type_specifier;
@@ -115,7 +117,7 @@ void yyerror(const char *s) {
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
 %token PTR_OP INC_OP DEC_OP AND_OP OR_OP EQ_OP NE_OP LE_OP GE_OP ELLIPSIS
 %token RETURN
-%token SIZEOF IF ELSE WHILE
+%token SIZEOF IF ELSE WHILE CONTINUE BREAK
 
 %start translation_unit
 %%
@@ -344,9 +346,14 @@ parameter_decl :
 
 initializer :
     assignment_expr { $$ = new AstInitializer($1); SETPOS($$);}
+	| '{' initializer_list '}' { $$ = new AstInitializer($2); }
 	/* | '{' initializer_list '}' */
 	/* | '{' initializer_list ',' '}' */
 	;
+
+initializer_list :
+    initializer { $$ = new AstInitializerList($1); }
+	| initializer_list ',' initializer { $$ = $1; $$->initializer_list.push_back($3); }
 
 stmt :
     /* labeled_stmt
@@ -394,6 +401,8 @@ expr_stmt :
 jump_stmt :
     RETURN ';' { $$ = new AstJumpStmt(AstJumpStmt::StmtType::RETURN); SETPOS($$);}
     | RETURN expr ';' { $$ = new AstJumpStmt($2); SETPOS($$);}
+    | CONTINUE ';' { $$ = new AstJumpStmt(AstJumpStmt::StmtType::CONTINUE); }
+    | BREAK ';' { $$ = new AstJumpStmt(AstJumpStmt::StmtType::BREAK); }
     ;
 
 translation_unit : 

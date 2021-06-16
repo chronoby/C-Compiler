@@ -4,7 +4,8 @@ parser.hpp
 scanner.cpp
 out.ll
 out.s
-a.out
 a.ll
+a.s
+a.out
 
 .vscode/
