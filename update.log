@@ -77,3 +77,9 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 * 增加了指针的声明和使用
 * 修复了primary expr的Bug
 * 增加了编译器交互
+
+------
+
+2021-06-16 wyq:
+* 删除了部分debug输出
+* 添加注释功能（//和/**/)

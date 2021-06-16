@@ -7,6 +7,9 @@
 extern "C" int yywrap() { }
 %}
 
+%s COMMENT
+%s COMMENT2
+
 WS          [ \t\r]
 NEWLINE     [\n]
 TYPE_INT    "int"
@@ -66,63 +69,71 @@ CHAR        '(\\.|[^\\'])+'
 STRING      \"(\\.|[^\\"])*\"
 
 %%
-{WS}                        ;
-{NEWLINE}                   ;
-{VOID}                      SAVE_TOKEN; return VOID;
-{TYPE_INT}			        SAVE_TOKEN; return TYPE_INT;
-{TYPE_LONG}                 SAVE_TOKEN; return TYPE_LONG;
-{TYPE_SHORT}                SAVE_TOKEN; return TYPE_SHORT;
-{TYPE_DOUBLE}               SAVE_TOKEN; return TYPE_DOUBLE;
-{TYPE_FLOAT}                SAVE_TOKEN; return TYPE_FLOAT;
-{TYPE_SIGNED}               SAVE_TOKEN; return TYPE_SIGNED;
-{TYPE_UNSIGNED}             SAVE_TOKEN; return TYPE_UNSIGNED;
-{TYPE_CHAR}                 SAVE_TOKEN; return TYPE_CHAR;
-{IF}                        SAVE_TOKEN; return IF;
-{ELSE}                      SAVE_TOKEN; return ELSE;
-{WHILE}                     SAVE_TOKEN; return WHILE;
-{SIZEOF}                    SAVE_TOKEN; return SIZEOF;
-{RETURN}                    SAVE_TOKEN; return RETURN;
 
-{IDENTIFIER}                SAVE_TOKEN; return IDENTIFIER;
+<INITIAL>"/*"               {BEGIN COMMENT;}
+<COMMENT>"*/"               {BEGIN INITIAL;}
+<COMMENT>.|\n               {;}
+<INITIAL>"//"               {BEGIN COMMENT2;}
+<COMMENT2>\n                {BEGIN INITIAL;}
+<COMMENT2>.                 {;}
 
-{INTEGER}                   SAVE_TOKEN; return INTEGER;
-{HEXI}                      SAVE_TOKEN; return HEXI;
-{OCTAL}                     SAVE_TOKEN; return OCTAL;
-{FLOAT}                     SAVE_TOKEN; return FLOAT;
-{CHAR}                      SAVE_TOKEN; return CHAR;
+<INITIAL>{WS}                        ;
+<INITIAL>{NEWLINE}                   ;
+<INITIAL>{VOID}                      SAVE_TOKEN; return VOID;
+<INITIAL>{TYPE_INT}			         SAVE_TOKEN; return TYPE_INT;
+<INITIAL>{TYPE_LONG}                 SAVE_TOKEN; return TYPE_LONG;
+<INITIAL>{TYPE_SHORT}                SAVE_TOKEN; return TYPE_SHORT;
+<INITIAL>{TYPE_DOUBLE}               SAVE_TOKEN; return TYPE_DOUBLE;
+<INITIAL>{TYPE_FLOAT}                SAVE_TOKEN; return TYPE_FLOAT;
+<INITIAL>{TYPE_SIGNED}               SAVE_TOKEN; return TYPE_SIGNED;
+<INITIAL>{TYPE_UNSIGNED}             SAVE_TOKEN; return TYPE_UNSIGNED;
+<INITIAL>{TYPE_CHAR}                 SAVE_TOKEN; return TYPE_CHAR;
+<INITIAL>{IF}                        SAVE_TOKEN; return IF;
+<INITIAL>{ELSE}                      SAVE_TOKEN; return ELSE;
+<INITIAL>{WHILE}                     SAVE_TOKEN; return WHILE;
+<INITIAL>{SIZEOF}                    SAVE_TOKEN; return SIZEOF;
+<INITIAL>{RETURN}                    SAVE_TOKEN; return RETURN;
 
-{STRING}                    SAVE_TOKEN; return STRING;
+<INITIAL>{IDENTIFIER}                SAVE_TOKEN; return IDENTIFIER;
 
-{PTR_OP}                    return PTR_OP;
-{INC_OP}                    return INC_OP;
-{DEC_OP}                    return DEC_OP;
-{AND_OP}                    return AND_OP;
-{OR_OP}                     return OR_OP;
-{EQ_OP}                     return EQ_OP;
-{NE_OP}                     return NE_OP;
-{LE_OP}                     return LE_OP;
-{GE_OP}                     return GE_OP;
+<INITIAL>{INTEGER}                   SAVE_TOKEN; return INTEGER;
+<INITIAL>{HEXI}                      SAVE_TOKEN; return HEXI;
+<INITIAL>{OCTAL}                     SAVE_TOKEN; return OCTAL;
+<INITIAL>{FLOAT}                     SAVE_TOKEN; return FLOAT;
+<INITIAL>{CHAR}                      SAVE_TOKEN; return CHAR;
 
-{AND}                       return('&');
-{ASSIGN}                    return('=');
-{PLUS}                      return('+');
-{MINUS}                     return('-');
-{MULTI}                     return('*');
-{DIV}                       return('/');
-{MOD}                       return('%');
-{SEMI}                      return(';');
-{LP}                        return('(');
-{RP}                        {return(')');}
-{LB}                        return('{');
-{RB}                        return('}');
-{LF}                        return('[');
-{RF}                        return(']');
-{DOT}                       return '.';
-{COMMA}                     return ',';
-{LESS}                      return '<';
-{GREATER}                   return '>';
-{ELLIPSIS}                  return ELLIPSIS;
+<INITIAL>{STRING}                    SAVE_TOKEN; return STRING;
 
-.                           printf("Unknown token!n"); yyterminate();
+<INITIAL>{PTR_OP}                    return PTR_OP;
+<INITIAL>{INC_OP}                    return INC_OP;
+<INITIAL>{DEC_OP}                    return DEC_OP;
+<INITIAL>{AND_OP}                    return AND_OP;
+<INITIAL>{OR_OP}                     return OR_OP;
+<INITIAL>{EQ_OP}                     return EQ_OP;
+<INITIAL>{NE_OP}                     return NE_OP;
+<INITIAL>{LE_OP}                     return LE_OP;
+<INITIAL>{GE_OP}                     return GE_OP;
+
+<INITIAL>{AND}                       return('&');
+<INITIAL>{ASSIGN}                    return('=');
+<INITIAL>{PLUS}                      return('+');
+<INITIAL>{MINUS}                     return('-');
+<INITIAL>{MULTI}                     return('*');
+<INITIAL>{DIV}                       return('/');
+<INITIAL>{MOD}                       return('%');
+<INITIAL>{SEMI}                      return(';');
+<INITIAL>{LP}                        return('(');
+<INITIAL>{RP}                        {return(')');}
+<INITIAL>{LB}                        return('{');
+<INITIAL>{RB}                        return('}');
+<INITIAL>{LF}                        return('[');
+<INITIAL>{RF}                        return(']');
+<INITIAL>{DOT}                       return '.';
+<INITIAL>{COMMA}                     return ',';
+<INITIAL>{LESS}                      return '<';
+<INITIAL>{GREATER}                   return '>';
+<INITIAL>{ELLIPSIS}                  return ELLIPSIS;
+
+<INITIAL>.                           printf("Unknown token!n"); yyterminate();
 
 %%

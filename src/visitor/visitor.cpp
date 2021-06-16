@@ -42,7 +42,7 @@ void Visitor::codegenProgram(AstTranslationUnit* root, const char* filename)
 {
     root->codegen(*this);
 
-    std::cout << "Generate code completed" << std::endl << "LLVM IR:" << std::endl;
+    // std::cout << "Generate code completed" << std::endl << "LLVM IR:" << std::endl;
     std::string llvm_IR;
     llvm::raw_string_ostream OS(llvm_IR);
     OS << *module;
@@ -75,7 +75,7 @@ int Visitor::getTmpVarId()
 std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
 {
     // TO BE FINISHED
-    std::cout << "Creating primary expr" << node.value << std::endl;
+    // std::cout << "Creating primary expr" << node.value << std::endl;
     llvm::Value* value = nullptr;
     llvm::Value* addr = nullptr;
     
