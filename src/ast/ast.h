@@ -120,8 +120,7 @@ public:
     
     // TO BE FINISED
     AstPostfixExpr(AstPrimaryExpr* primary_expr): primary_expr(primary_expr), expr_type(ExprType::PRIMARY), identifier_name(primary_expr->identifier_name) {};
-    // AstPostfixExpr(AstPostfixExpr* expr, std::string ind): postfix_expr(expr), identifier_name(expr->identifier_name), 
-    //     index(ind), expr_type(ExprType::IDX) { }
+    AstPostfixExpr(AstPostfixExpr* expr, AstExpr* ind): postfix_expr(expr), expr(ind), expr_type(ExprType::IDX) { }
     // AstPostfixExpr(AstPostfixExpr* expr, OpType op): postfix_expr(expr), op_type(op), expr_type(ExprType::OP) { }
     // AstPostfixExpr(AstPostfixExpr* expr, ExprType expr_type): postfix_expr(expr), expr_type(expr_type) {}
     void setExprType(ExprType expr_type) { this->expr_type = expr_type; }
@@ -134,13 +133,12 @@ public:
     // TO BE FINISHED
     AstPrimaryExpr* primary_expr;
 
-    // AstPostfixExpr* postfix_expr;
+    AstPostfixExpr* postfix_expr;
     AstArgumentExprList* argument_expr_list;
     AstExpr* expr;
     OpType op_type;
 
     std::string identifier_name;
-    std::string index;
 };
 
 class AstUnaryExpr : public AstExpression

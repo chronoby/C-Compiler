@@ -273,9 +273,17 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
         {
             return node.primary_expr->codegen(*this);
         }
-        // case AstPostfixExpr::ExprType::IDX:
-        // {
-        // }
+        case AstPostfixExpr::ExprType::IDX:
+        {
+            auto post_value = node.postfix_expr->codegen(*this);
+            auto ind_value = node.expr->codegen(*this);
+            auto zero = llvm::ConstantInt::get(*context, llvm::APInt(32, 0, true));
+            // auto index = llvm::ConstantInt::get(*context, llvm::APInt(32, 3, true));
+            // auto addr = llvm::GetElementPtrInst::Create(post_value->addr, { zero, index });
+            auto addr = builder->CreateGEP(post_value->addr, {zero, ind_value->value});
+            auto val = builder->CreateLoad(addr);
+            return std::make_shared<Variable>(val, addr);
+        }
         // case AstPostfixExpr::ExprType::OP:
         // {
         //     return node.primary_expr->codegen(*this);
@@ -457,7 +465,22 @@ std::shared_ptr<Variable> Visitor::codegen(const AstMultiplicativeExpr& node)
                 {
                     // only for signed int
                     // to support double, add CreateFDiv. but how to get type?
-                    res = this->builder->CreateSDiv(node.multi_expr->codegen(*this)->value, node.cast_expr->codegen(*this)->value, "div");
+                    auto lhs = node.multi_expr->codegen(*this)->value;
+                    auto rhs = node.cast_expr->codegen(*this)->value;
+                    auto type_lhs = lhs->getType();
+                    auto type_rhs = rhs->getType();
+                    if(type_rhs == llvm::Type::getInt32Ty(*context) && type_lhs == llvm::Type::getInt32Ty(*context))
+                    {
+                        res = this->builder->CreateSDiv(lhs, rhs, "sdiv");
+                    }
+                    else if(type_rhs == llvm::Type::getDoubleTy(*context) && type_lhs == llvm::Type::getDoubleTy(*context))
+                    {
+                        res = this->builder->CreateFDiv(lhs, rhs, "fdiv");
+                    }
+                    else
+                    {
+                        res = this->builder->CreateFDiv(builder->CreateSIToFP(lhs, llvm::Type::getDoubleTy(*context)), builder->CreateSIToFP(rhs, llvm::Type::getDoubleTy(*context)), "fdiv");
+                    }
                     break;
                 }
                 case AstMultiplicativeExpr::OpType::MOD:

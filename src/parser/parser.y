@@ -128,10 +128,8 @@ primary_expr :
 
 postfix_expr :
     primary_expr { $$ = new AstPostfixExpr($1); }
-    | postfix_expr '[' INTEGER ']' { 
-        $$ = $1;
-        $$->setExprType(AstPostfixExpr::ExprType::IDX);
-    } /* NOTE: index set as int now */
+    | postfix_expr '[' expr ']' { $$ = new AstPostfixExpr($1, $3); }
+
     /* | postfix_expr '[' expression ']' */ 
     | postfix_expr '(' ')' { 
         $$ = $1; 

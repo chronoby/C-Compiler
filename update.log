@@ -77,3 +77,13 @@ expression部分的codegen关键是计算出expression的llvm::Value，这个过
 * 增加了指针的声明和使用
 * 修复了primary expr的Bug
 * 增加了编译器交互
+
+------
+
+2021-06-15 wby:
+* Add array declaration, load and store
+    * decl(no initializer, size must be integer): e.g. int a[10]
+    * load and store: index can be expr
+* Add fdiv, now support 
+    * int / int, double / double
+    * int / double, double / int(int will be cast to double)
