@@ -189,8 +189,8 @@ unary_op :
 	;
 
 cast_expr : 
-    unary_expr { $$ = new AstCastExpr($1); }
-	/* | '(' type_name ')' cast_expression */
+    unary_expr { $$ = new AstCastExpr($1); SETPOS($$);}
+	| '(' type_specifier ')' cast_expr {$$ = new AstCastExpr($4, $2);SETPOS($$);}
     ;
 
 multiplicative_expr : 
