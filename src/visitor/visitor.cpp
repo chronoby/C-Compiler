@@ -224,6 +224,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
                 auto id = param_id_pair->second;
                 auto arg = present_function->getArg(id);
                 value = arg;
+
                 return std::make_shared<Variable>(value, addr);
             }
         }
@@ -236,7 +237,12 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPrimaryExpr& node)
             {
                 addr = pair->second;
                 if (this->envs.size() != 1) value = this->builder->CreateLoad(addr);
-                
+
+                if (value->getType()->isArrayTy())
+                {
+                    return std::make_shared<Variable>(addr, nullptr);
+                }
+
                 return std::make_shared<Variable>(value, addr);
             }
             if (i == 0)
@@ -275,7 +281,19 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
             auto zero = llvm::ConstantInt::get(*context, llvm::APInt(32, 0, true));
             // auto index = llvm::ConstantInt::get(*context, llvm::APInt(32, 3, true));
             // auto addr = llvm::GetElementPtrInst::Create(post_value->addr, { zero, index });
-            auto addr = builder->CreateGEP(post_value->addr, {zero, ind_value->value});
+
+            // bullshit
+            auto element = builder->CreateLoad(post_value->value);
+            llvm::Value* addr = nullptr;
+            if (!(element->getType()->isArrayTy()))
+            {
+                addr = builder->CreateGEP(element, {zero, ind_value->value});
+            }
+            else
+            {
+                addr = builder->CreateGEP(post_value->value, {zero, ind_value->value});
+            }
+
             auto val = builder->CreateLoad(addr);
             return std::make_shared<Variable>(val, addr);
         }
@@ -824,6 +842,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAssignmentExpr& node)
             {
                 llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(right->value, true, left->value->getType(), true);
                 bool able_to_cast = llvm::CastInst::castIsValid(cast_op, right->value->getType(), left->value->getType());
+                
                 if (!able_to_cast)
                 {
                     node.errorMsg("unable to do implict cast between these types");
@@ -1052,6 +1071,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
             }
 
             llvm::AllocaInst* var = this->builder->CreateAlloca(var_type, nullptr, var_name);
+
             if (initializer)
             {
                 if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::ID)
@@ -1069,7 +1089,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
                             return nullptr;
                         }
                         initializer_value = this->builder->CreateCast(cast_op, initializer_value, var->getType()->getPointerElementType());
-                    }
+                    }  
                     
                     llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
                 }
@@ -1321,6 +1341,14 @@ std::shared_ptr<Variable> Visitor::codegen(const AstExternDecl& node)
 
 std::shared_ptr<Variable> Visitor::codegen(const AstFunctionDef& node)
 {
+    auto direct_declarator = node.declarator->direct_declarator;
+    if (envs.back()->function_defined.find(direct_declarator->id_name) != envs.back()->function_defined.end())
+    {
+        node.errorMsg(std::string("function redefined: ") + direct_declarator->id_name);
+        this->error=1;
+        return nullptr;
+    }
+    
     llvm::Type* result_type = llvm::Type::getInt32Ty(*context);
     auto new_param = new std::map<std::string, unsigned>();
 
@@ -1331,7 +1359,6 @@ std::shared_ptr<Variable> Visitor::codegen(const AstFunctionDef& node)
         result_type = type_specs->codegen(*this);
     }
     
-    auto direct_declarator = node.declarator->direct_declarator;
     llvm::FunctionType* func_type;
     switch(direct_declarator->declarator_type)
     {
@@ -1376,8 +1403,14 @@ std::shared_ptr<Variable> Visitor::codegen(const AstFunctionDef& node)
     this->present_function = function;
     this->func_params = new_param;
 
-    this->envs.back()->functions.insert({direct_declarator->id_name, function});
-    this->envs.back()->function_types.insert({direct_declarator->id_name, func_type});
+    if (this->envs.back()->functions.find(direct_declarator->id_name) == this->envs.back()->functions.end())
+    {
+        this->envs.back()->functions.insert({direct_declarator->id_name, function});
+        this->envs.back()->function_types.insert({direct_declarator->id_name, func_type});
+    }
+    
+    this->envs.back()->function_defined.insert({direct_declarator->id_name, true});
+    
     node.compound_stmt->codegen(*this);
     if (result_type->isVoidTy()) this->builder->CreateRetVoid();
     this->present_function = old_function;

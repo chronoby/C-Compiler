@@ -1,22 +1,11 @@
-int fib(int x)
-{
-    if(x == 1 || x == 2)
-    {
-        return 1;
-    }
-    else
-    {
-        return fib(x - 1) + fib(x - 2);
-    }
-    return 0;
-}
+
 
 int main()
 {
-    int a;
-    double c = 10;
-    scanf("%d", &a);
-    c = (double)a;
-    printf("%f\n", c);
+    int arr[5] = {1, 2, 3 ,4 ,5};
+    int* ptr = arr;
+
+    printf("%d\n", arr);
+    printf("%d\n", ptr[1]);
     return 0;
 }

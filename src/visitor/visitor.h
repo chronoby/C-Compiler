@@ -24,6 +24,7 @@ public:
     std::map<std::string, llvm::Value*> locals;
     std::map<std::string, llvm::Function*> functions;
     std::map<std::string, llvm::FunctionType*> function_types;
+    std::map<std::string, bool> function_defined; 
 };
 
 class Visitor
