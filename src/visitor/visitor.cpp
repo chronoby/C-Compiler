@@ -34,6 +34,14 @@ Visitor::Visitor()
     // llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*context), argTypes, false);
     // llvm::Function* mainFunction = llvm::Function::Create(ftype, llvm::Function::InternalLinkage, "main", *module);
     // block = llvm::BasicBlock::Create(*context, "entry", mainFunction, 0);
+    CastOrder =
+    {
+        { llvm::Type::getInt8Ty(*context), 0 },
+        { llvm::Type::getInt16Ty(*context), 1 },
+        { llvm::Type::getInt32Ty(*context), 2 },
+        { llvm::Type::getFloatTy(*context), 3 },
+        { llvm::Type::getDoubleTy(*context), 4 }
+    };
 
     envs.push_back(new LocalEnv());
 }
@@ -578,38 +586,69 @@ std::shared_ptr<Variable> Visitor::codegen(const AstMultiplicativeExpr& node)
         case AstMultiplicativeExpr::ExprType::OP:
         {
             llvm::Value* res;
+            auto lhs = node.multi_expr->codegen(*this)->value;
+            auto rhs = node.cast_expr->codegen(*this)->value;
+            
             switch (node.op_type)
             {
                 case AstMultiplicativeExpr::OpType::MUL:
                 {
-                    res = this->builder->CreateMul(node.multi_expr->codegen(*this)->value, node.cast_expr->codegen(*this)->value, "mul");
+                    auto cast_res = type_check(lhs, rhs);
+                    if(cast_res == CastRes::INT)
+                    {
+                        res = this->builder->CreateMul(lhs, rhs, "mul");
+                    }
+                    else if(cast_res == CastRes::FLOAT)
+                    {
+                        res = this->builder->CreateFMul(lhs, rhs, "fmul");
+                    }
+                    else if(cast_res == CastRes::WRONG)
+                    {
+                        node.errorMsg("unable to do implict cast between these types");
+                        this->error = 1;
+                        return nullptr;
+                    }
+                    else
+                    {
+                        return nullptr;
+                    }
                     break;
                 }
                 case AstMultiplicativeExpr::OpType::DIV:
                 {
-                    // only for signed int
-                    // to support double, add CreateFDiv. but how to get type?
-                    auto lhs = node.multi_expr->codegen(*this)->value;
-                    auto rhs = node.cast_expr->codegen(*this)->value;
-                    auto type_lhs = lhs->getType();
-                    auto type_rhs = rhs->getType();
-                    if(type_rhs == llvm::Type::getInt32Ty(*context) && type_lhs == llvm::Type::getInt32Ty(*context))
+                    auto cast_res = type_check(lhs, rhs);
+                    if(cast_res == CastRes::INT)
                     {
                         res = this->builder->CreateSDiv(lhs, rhs, "sdiv");
                     }
-                    else if(type_rhs == llvm::Type::getDoubleTy(*context) && type_lhs == llvm::Type::getDoubleTy(*context))
+                    else if(cast_res == CastRes::FLOAT)
                     {
                         res = this->builder->CreateFDiv(lhs, rhs, "fdiv");
                     }
+                    else if(cast_res == CastRes::WRONG)
+                    {
+                        node.errorMsg("unable to do implict cast between these types");
+                        this->error = 1;
+                        return nullptr;
+                    }
                     else
                     {
-                        res = this->builder->CreateFDiv(builder->CreateSIToFP(lhs, llvm::Type::getDoubleTy(*context)), builder->CreateSIToFP(rhs, llvm::Type::getDoubleTy(*context)), "fdiv");
+                        return nullptr;
                     }
                     break;
                 }
                 case AstMultiplicativeExpr::OpType::MOD:
                 {
-                    res = this->builder->CreateSRem(node.multi_expr->codegen(*this)->value, node.cast_expr->codegen(*this)->value, "ram");
+                    if(lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy())
+                    {
+                        res = this->builder->CreateSRem(lhs, rhs, "ram");
+                    }
+                    else
+                    {
+                        node.errorMsg("mod operands type is wrong");
+                        this->error = 1;
+                        return nullptr;
+                    }
                     break;
                 }
             }
@@ -630,16 +669,55 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
         case AstAdditiveExpr::ExprType::OP:
         {
             llvm::Value* res;
+            auto lhs = node.add_expr->codegen(*this)->value;
+            auto rhs = node.multi_expr->codegen(*this)->value;
+            auto cast_res = type_check(lhs, rhs);
             switch (node.op_type)
             {
                 case AstAdditiveExpr::OpType::PLUS:
                 {
-                    res = this->builder->CreateAdd(node.add_expr->codegen(*this)->value, node.multi_expr->codegen(*this)->value, "add");
+                    if(cast_res == CastRes::INT)
+                    {
+                        res = this->builder->CreateAdd(lhs, rhs, "add");
+                    }
+                    else if(cast_res == CastRes::FLOAT)
+                    {
+                        res = this->builder->CreateFAdd(lhs, rhs, "fadd");
+                    }
+                    else if(cast_res == CastRes::WRONG)
+                    {
+                        node.errorMsg("unable to do implict cast between these types");
+                        this->error = 1;
+                        return nullptr;
+                    }
+                    else
+                    {
+                        // true?
+                        // unknown type
+                        return nullptr;
+                    }
                     break;
                 }
                 case AstAdditiveExpr::OpType::MINUS:
                 {
-                    res = this->builder->CreateSub(node.add_expr->codegen(*this)->value, node.multi_expr->codegen(*this)->value, "sub");
+                    if(cast_res == CastRes::INT)
+                    {
+                        res = this->builder->CreateSub(lhs, rhs, "sub");
+                    }
+                    else if(cast_res == CastRes::FLOAT)
+                    {
+                        res = this->builder->CreateFSub(lhs, rhs, "fsub");
+                    }
+                    else if(cast_res == CastRes::WRONG)
+                    {
+                        node.errorMsg("unable to do implict cast between these types");
+                        this->error = 1;
+                        return nullptr;
+                    }
+                    else
+                    {
+                        return nullptr;
+                    }
                     break;
                 }
             }
@@ -672,28 +750,71 @@ std::shared_ptr<Variable> Visitor::codegen(const AstRelationalExpr& node)
         case AstRelationalExpr::ExprType::OP:
         {
             llvm::Value* res;
-            switch (node.op_type)
+            auto lhs = node.rela_expr->codegen(*this)->value;
+            auto rhs = node.shift_expr->codegen(*this)->value;
+            auto cast_res = type_check(lhs, rhs);
+            
+            if(cast_res == CastRes::INT)
             {
-                case AstRelationalExpr::OpType::GREATER:
+                switch (node.op_type)
                 {
-                    res =  builder->CreateICmpSGT(node.rela_expr->codegen(*this)->value, node.shift_expr->codegen(*this)->value, "gt");
-                    break;
+                    case AstRelationalExpr::OpType::GREATER:
+                    {
+                        res =  builder->CreateICmpSGT(lhs, rhs, "gt");
+                        break;
+                    }
+                    case AstRelationalExpr::OpType::LESS:
+                    {
+                        res =  builder->CreateICmpSLT(lhs, rhs, "lt");
+                        break;
+                    }
+                    case AstRelationalExpr::OpType::GE:
+                    {
+                        res =  builder->CreateICmpSGE(lhs, rhs, "gte");
+                        break;
+                    }
+                    case AstRelationalExpr::OpType::LE:
+                    {
+                        res =  builder->CreateICmpSLE(lhs, rhs, "lte");
+                        break;
+                    }
                 }
-                case AstRelationalExpr::OpType::LESS:
+            }
+            else if (cast_res == CastRes::FLOAT)
+            {
+                switch (node.op_type)
                 {
-                    res =  builder->CreateICmpSLT(node.rela_expr->codegen(*this)->value, node.shift_expr->codegen(*this)->value, "lt");
-                    break;
+                    case AstRelationalExpr::OpType::GREATER:
+                    {
+                        res =  builder->CreateFCmpOGT(lhs, rhs, "fgt");
+                        break;
+                    }
+                    case AstRelationalExpr::OpType::LESS:
+                    {
+                        res =  builder->CreateFCmpOLT(lhs, rhs, "flt");
+                        break;
+                    }
+                    case AstRelationalExpr::OpType::GE:
+                    {
+                        res =  builder->CreateFCmpOGE(lhs, rhs, "fgte");
+                        break;
+                    }
+                    case AstRelationalExpr::OpType::LE:
+                    {
+                        res =  builder->CreateFCmpOLE(lhs, rhs, "flte");
+                        break;
+                    }
                 }
-                case AstRelationalExpr::OpType::GE:
-                {
-                    res =  builder->CreateICmpSGE(node.rela_expr->codegen(*this)->value, node.shift_expr->codegen(*this)->value, "gte");
-                    break;
-                }
-                case AstRelationalExpr::OpType::LE:
-                {
-                    res =  builder->CreateICmpSLE(node.rela_expr->codegen(*this)->value, node.shift_expr->codegen(*this)->value, "lte");
-                    break;
-                }
+            }
+            else if(cast_res == CastRes::WRONG)
+            {
+                node.errorMsg("unable to do implict cast between these types");
+                this->error = 1;
+                return nullptr;
+            }
+            else
+            {
+                return nullptr;
             }
             return std::make_shared<Variable>(res, nullptr);
         }
@@ -711,18 +832,51 @@ std::shared_ptr<Variable> Visitor::codegen(const AstEqualityExpr& node)
         }
         case AstEqualityExpr::ExprType::OP:
         {
-            switch (node.op_type)
+            llvm::Value* res;
+            auto lhs = node.equal_expr->codegen(*this)->value;
+            auto rhs = node.rela_expr->codegen(*this)->value;
+            auto cast_res = type_check(lhs, rhs);
+            if(cast_res == CastRes::INT)
             {
-                case AstEqualityExpr::OpType::EQ:
+                switch (node.op_type)
                 {
-                    llvm::Value* res =  builder->CreateICmpEQ(node.equal_expr->codegen(*this)->value, node.rela_expr->codegen(*this)->value, "eq");
-                    return std::make_shared<Variable>(res, nullptr);
-                }            
-                case AstEqualityExpr::OpType::NE:
-                {
-                    llvm::Value* res =  builder->CreateICmpNE(node.equal_expr->codegen(*this)->value, node.rela_expr->codegen(*this)->value, "ne");
-                    return std::make_shared<Variable>(res, nullptr);
+                    case AstEqualityExpr::OpType::EQ:
+                    {
+                        llvm::Value* res =  builder->CreateICmpEQ(lhs, rhs, "eq");
+                        return std::make_shared<Variable>(res, nullptr);
+                    }            
+                    case AstEqualityExpr::OpType::NE:
+                    {
+                        llvm::Value* res =  builder->CreateICmpNE(lhs, rhs, "ne");
+                        return std::make_shared<Variable>(res, nullptr);
+                    }
                 }
+            }
+            else if (cast_res == CastRes::FLOAT)
+            {
+                switch (node.op_type)
+                {
+                    case AstEqualityExpr::OpType::EQ:
+                    {
+                        llvm::Value* res =  builder->CreateFCmpOEQ(lhs, rhs, "feq");
+                        return std::make_shared<Variable>(res, nullptr);
+                    }            
+                    case AstEqualityExpr::OpType::NE:
+                    {
+                        llvm::Value* res =  builder->CreateFCmpONE(lhs, rhs, "fne");
+                        return std::make_shared<Variable>(res, nullptr);
+                    }
+                }
+            }
+            else if(cast_res == CastRes::WRONG)
+            {
+                node.errorMsg("unable to do implict cast between these types");
+                this->error = 1;
+                return nullptr;
+            }
+            else
+            {
+                return nullptr;
             }
         }
     }
@@ -1469,3 +1623,67 @@ std::shared_ptr<Variable> Visitor::codegen(const AstJumpStmt& node)
 }
 // ------------------------------------------------------------------------------
 
+Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
+{
+    auto l_type = lhs->getType();
+    auto r_type = rhs->getType();
+    if(l_type == r_type)
+    {
+        if(l_type->isIntegerTy())
+        {
+            return CastRes::INT;
+        }
+        else if(l_type->isFloatingPointTy())
+        {
+            return CastRes::FLOAT;
+        }
+        else
+        {
+            return CastRes::OTHER;
+        }
+    }
+    else
+    {
+        // std::cout << l_type << " " << r_type << std::endl;
+        // std::cout << llvm::Type::getInt32Ty(*context) << " " << llvm::Type::getInt16Ty(*context) << std::endl;
+        // std::cout << CastOrder[l_type] << " " << CastOrder[r_type] << std::endl;
+        
+        if(CastOrder[l_type] > CastOrder[r_type])
+        {
+            llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(rhs, true, l_type, true);
+            bool able_to_cast = llvm::CastInst::castIsValid(cast_op, r_type, l_type);
+            if (!able_to_cast)
+            {
+                return CastRes::WRONG;
+            }
+            rhs = this->builder->CreateCast(cast_op, rhs, l_type);
+            if(l_type->isIntegerTy())
+            {
+                return CastRes::INT;
+            }
+            else if(l_type->isFloatingPointTy())
+            {
+                return CastRes::FLOAT;
+            }
+
+        }
+        else
+        {
+            llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(lhs, true, r_type, true);
+            bool able_to_cast = llvm::CastInst::castIsValid(cast_op, l_type, r_type);
+            if (!able_to_cast)
+            {
+                return CastRes::WRONG;
+            }
+            lhs = this->builder->CreateCast(cast_op, lhs, r_type);
+            if(r_type->isIntegerTy())
+            {
+                return CastRes::INT;
+            }
+            else if(r_type->isFloatingPointTy())
+            {
+                return CastRes::FLOAT;
+            }
+        }
+    }
+}
