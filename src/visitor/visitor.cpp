@@ -34,6 +34,14 @@ Visitor::Visitor()
     // llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(*context), argTypes, false);
     // llvm::Function* mainFunction = llvm::Function::Create(ftype, llvm::Function::InternalLinkage, "main", *module);
     // block = llvm::BasicBlock::Create(*context, "entry", mainFunction, 0);
+    CastOrder =
+    {
+        { llvm::Type::getInt8Ty(*context), 0 },
+        { llvm::Type::getInt16Ty(*context), 1 },
+        { llvm::Type::getInt32Ty(*context), 2 },
+        { llvm::Type::getFloatTy(*context), 3 },
+        { llvm::Type::getDoubleTy(*context), 4 }
+    };
 
     envs.push_back(new LocalEnv());
 }
@@ -585,7 +593,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstMultiplicativeExpr& node)
 
 std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
 {
-    switch (node.expr_type)
+            std::cout<<"?"<<std::endl;
+        switch (node.expr_type)
     {
         case AstAdditiveExpr::ExprType::MULTI:
         {
@@ -593,12 +602,37 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
         }
         case AstAdditiveExpr::ExprType::OP:
         {
+            std::cout<<"?"<<std::endl;
             llvm::Value* res;
+            auto lhs = node.add_expr->codegen(*this)->value;
+            auto rhs = node.multi_expr->codegen(*this)->value;
+            std::cout<<"?"<<std::endl;
+            auto cast_res = type_check(lhs, rhs);
+            std::cout<<"?"<<std::endl;
             switch (node.op_type)
             {
                 case AstAdditiveExpr::OpType::PLUS:
                 {
-                    res = this->builder->CreateAdd(node.add_expr->codegen(*this)->value, node.multi_expr->codegen(*this)->value, "add");
+                    if(cast_res == CastRes::INT)
+                    {
+                        res = this->builder->CreateAdd(lhs, rhs, "add");
+                    }
+                    else if(cast_res == CastRes::FLOAT)
+                    {
+                        res = this->builder->CreateFAdd(lhs, rhs, "add");
+                    }
+                    else if(cast_res == CastRes::WRONG)
+                    {
+                        node.errorMsg("unable to do implict cast between these types");
+                        this->error = 1;
+                        return nullptr;
+                    }
+                    else
+                    {
+                        // true?
+                        // unknown type
+                        return nullptr;
+                    }
                     break;
                 }
                 case AstAdditiveExpr::OpType::MINUS:
@@ -881,6 +915,7 @@ llvm::Type* Visitor::codegen(const AstTypeSpecifier& node)
 
 llvm::Type* Visitor::getPointerType(const AstTypeSpecifier& node)
 {
+    std::cout <<"???" <<std::endl;
     switch (node.type)
     {
         case (AstTypeSpecifier::Type::INT):
@@ -1413,3 +1448,76 @@ std::shared_ptr<Variable> Visitor::codegen(const AstJumpStmt& node)
 }
 // ------------------------------------------------------------------------------
 
+Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
+{
+    auto l_type = lhs->getType();
+    auto r_type = rhs->getType();
+    if(l_type == r_type)
+    {
+        if(l_type->isIntegerTy())
+        {
+            return CastRes::INT;
+        }
+        else if(l_type->isFloatingPointTy())
+        {
+            return CastRes::FLOAT;
+        }
+        else
+        {
+            return CastRes::OTHER;
+        }
+    }
+    else
+    {
+        std::cout << l_type << " " << r_type << std::endl;
+        std::cout << llvm::Type::getInt32Ty(*context) << " " << llvm::Type::getInt16Ty(*context) << std::endl;
+        std::cout << CastOrder[l_type] << " " << CastOrder[r_type] << std::endl;
+
+        for(auto it : CastOrder)
+        {
+            std::cout << it.first << " " << it.second << std::endl;
+            
+        }
+
+        
+        if(CastOrder[l_type] > CastOrder[r_type])
+        {
+            std::cout << "ok";
+            llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(rhs, true, l_type, true);
+            bool able_to_cast = llvm::CastInst::castIsValid(cast_op, r_type, l_type);
+            if (!able_to_cast)
+            {
+                return CastRes::WRONG;
+            }
+            rhs = this->builder->CreateCast(cast_op, rhs, l_type);
+            if(l_type->isIntegerTy())
+            {
+                return CastRes::INT;
+            }
+            else if(l_type->isFloatingPointTy())
+            {
+                return CastRes::FLOAT;
+            }
+
+        }
+        else
+        {
+            std::cout << "cao";
+            llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(lhs, true, r_type, true);
+            bool able_to_cast = llvm::CastInst::castIsValid(cast_op, l_type, r_type);
+            if (!able_to_cast)
+            {
+                return CastRes::WRONG;
+            }
+            lhs = this->builder->CreateCast(cast_op, lhs, r_type);
+            if(r_type->isIntegerTy())
+            {
+                return CastRes::INT;
+            }
+            else if(r_type->isFloatingPointTy())
+            {
+                return CastRes::FLOAT;
+            }
+        }
+    }
+}

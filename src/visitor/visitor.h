@@ -68,6 +68,10 @@ public:
     virtual std::shared_ptr<Variable> codegen(const AstIterStmt& node);
     virtual std::shared_ptr<Variable> codegen(const AstExprStmt& node);
     virtual std::shared_ptr<Variable> codegen(const AstJumpStmt& node);
+
+    enum class CastRes { INT, FLOAT, WRONG, OTHER };
+    std::map<llvm::Type*, int> CastOrder;
+    CastRes type_check(llvm::Value*& lhs, llvm::Value*& rhs);
     
     int getTmpVarId();
 
