@@ -352,7 +352,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
                     for (auto expr : expr_list->expr_list)
                     {
                         auto arg = expr->codegen(*this);
-                        if (arg) scanf_args.push_back(arg->value);
+                        if (arg && arg->value) scanf_args.push_back(arg->value);
                         else 
                         {
                             node.errorMsg("invalid function arg");
@@ -383,7 +383,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
                     for (auto expr : expr_list->expr_list)
                     {
                         auto arg = expr->codegen(*this);
-                        if (arg) printf_args.push_back(arg->value);
+                        if (arg&& arg->value) printf_args.push_back(arg->value);
                         else 
                         {
                             node.errorMsg("invalid function arg");
@@ -423,7 +423,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
                     auto arg = expr->codegen(*this);
                     // auto copied_arg = this->builder->CreateAlloca(arg->getType(), nullptr, std::string("tmp_var_") + std::to_string(this->getTmpVarId()));
                     // TODO: add type check
-                    if (arg) args.push_back(arg->value);
+                    if (arg && arg->value) args.push_back(arg->value);
                     else 
                     {
                         node.errorMsg("invalid function arg");
@@ -495,6 +495,20 @@ std::shared_ptr<Variable> Visitor::codegen(const AstUnaryExpr& node)
                 llvm::Value* value = this->builder->CreateLoad(value_ptr);
                 return std::make_shared<Variable>(value, value_ptr);
                 break;
+            }
+            case AstUnaryOp::OpType::MINUS:
+            {
+                std::shared_ptr<Variable> id = node.cast_expr->codegen(*this);
+                
+                llvm::Value* v = id->value;
+                llvm::Type* v_type = v->getType();
+                
+                llvm::Constant* minus_1 = nullptr;
+                if (v_type->isFloatingPointTy()) minus_1 = llvm::ConstantFP::get(v_type, -1.0);
+                else minus_1 = llvm::ConstantInt::get(v_type, -1);
+
+                llvm::Value* res = this->builder->CreateMul(v, minus_1);
+                return std::make_shared<Variable>(res, nullptr);
             }
             default:
                 break;
@@ -788,9 +802,27 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAssignmentExpr& node)
             }
             // need update
             // return new llvm::StoreInst(node.assign_expr->codegen(*this), node.unary_expr->codegen(*this), false, block);
-            auto val = this->builder->CreateStore(right->value, left->addr, false);
-            // return std::make_shared<Variable>(node.assign_expr->codegen(*this)->value, nullptr);
-            return std::make_shared<Variable>(val, nullptr);
+            if (left->value->getType() != right->value->getType())
+            {
+                llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(right->value, true, left->value->getType(), true);
+                bool able_to_cast = llvm::CastInst::castIsValid(cast_op, right->value->getType(), left->value->getType());
+                if (!able_to_cast)
+                {
+                    node.errorMsg("unable to do implict cast between these types");
+                    this->error=1;
+                    return nullptr;
+                }
+                llvm::Value* cast_value = this->builder->CreateCast(cast_op, right->value, left->value->getType());
+                auto val = this->builder->CreateStore(cast_value, left->addr, false);
+                return std::make_shared<Variable>(val, nullptr);
+            }
+            else
+            {
+                auto val = this->builder->CreateStore(right->value, left->addr, false);
+                // return std::make_shared<Variable>(node.assign_expr->codegen(*this)->value, nullptr);
+                return std::make_shared<Variable>(val, nullptr);
+            }
+            
         }
     }
     return nullptr;
@@ -1002,7 +1034,21 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
             {
                 if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::ID)
                 {
-                    auto initializer_value = initializer->codegen(*this)->value;
+                    llvm::Value* initializer_value = initializer->codegen(*this)->value;
+
+                    if (initializer_value->getType() != var->getType()->getPointerElementType())
+                    {
+                        llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(initializer_value, true, var->getType()->getPointerElementType(), true);
+                        bool able_to_cast = llvm::CastInst::castIsValid(cast_op, initializer_value->getType(), var->getType()->getPointerElementType());
+                        if (!able_to_cast)
+                        {
+                            node.errorMsg("unable to do implict cast between these types");
+                            this->error=1;
+                            return nullptr;
+                        }
+                        initializer_value = this->builder->CreateCast(cast_op, initializer_value, var->getType()->getPointerElementType());
+                    }
+                    
                     llvm::Value* store_inst = this->builder->CreateStore(initializer_value, var, false);
                 }
                 else if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::BR)

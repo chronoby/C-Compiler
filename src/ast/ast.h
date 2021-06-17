@@ -199,10 +199,14 @@ public:
     enum class ExprType {UNARY, CAST};
 
     AstCastExpr(AstUnaryExpr* expr): unary_expr(expr), expr_type(ExprType::UNARY) { }
+    AstCastExpr(AstCastExpr* expr, AstTypeSpecifier* type): cast_expr(expr), type_spec(type), expr_type(ExprType::CAST) {}
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
+
+    AstTypeSpecifier* type_spec;
+
     AstUnaryExpr* unary_expr;
     AstCastExpr* cast_expr;
 };
