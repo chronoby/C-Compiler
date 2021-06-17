@@ -1194,6 +1194,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
     }
     auto init_declarators = node.init_declarator_list->init_declarators;
 
+    llvm::Value* var_;
+
     for (auto init_declarator : init_declarators)
     {
         auto declarator = init_declarator->declarator;
@@ -1277,8 +1279,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
             );
             
             present_env->locals.insert({var_name, var});
-            
-            return std::make_shared<Variable>(nullptr, var);
+            var_ = var;
+            // return std::make_shared<Variable>(nullptr, var);
         }
         else
         {
@@ -1342,10 +1344,11 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
             }
 
             present_env->locals.insert({var_name, var});
-            return std::make_shared<Variable>(nullptr, var);
+            var_ = var;
+            // return std::make_shared<Variable>(nullptr, var);
         } 
     }
-    return nullptr;
+    return std::make_shared<Variable>(nullptr, var_);
 }
 
 std::shared_ptr<Variable> Visitor::codegen(const AstInitializer& node)
