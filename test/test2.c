@@ -13,19 +13,31 @@
 
 int main()
 {
-    int aa[5];
-    char a = 'a';
-    short b = 2;
-    int c = a + b;
-    float d = 3.0;
+    // char a = 'a';
+    // short b = 2;
+    int a = 2;
+    int c = 5;
     double e = 7.5;
     
 
-    double f = a + b;
-    f = c + e;
+    int h = c + e;
+    int i = c - e;
+    double j = c * e;
+    double k = c / e;
+    int l = c % a;
+    // int m = e % a;
+    if(c < e)
+    {
+        
+    }
+    if(c == e)
+    {
+
+    }
+
     // double x = 1.2;
     // float y = 1.;
     // printf("%d\n", fib(a));
-    printf("%d %lf\n", c, f);
+    printf("%d %d %lf %lf %d %d\n", h, i, j, k, l, a);
     return 0;
 }
