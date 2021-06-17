@@ -524,16 +524,74 @@ std::shared_ptr<Variable> Visitor::codegen(const AstUnaryExpr& node)
             case AstUnaryOp::OpType::MINUS:
             {
                 std::shared_ptr<Variable> id = node.cast_expr->codegen(*this);
+                if (id == nullptr)
+                {
+                    node.errorMsg("invalid operand");
+                    this->error = 1;
+                    return nullptr;
+                }
                 
                 llvm::Value* v = id->value;
-                llvm::Type* v_type = v->getType();
-                
-                llvm::Constant* minus_1 = nullptr;
-                if (v_type->isFloatingPointTy()) minus_1 = llvm::ConstantFP::get(v_type, -1.0);
-                else minus_1 = llvm::ConstantInt::get(v_type, -1);
 
-                llvm::Value* res = this->builder->CreateMul(v, minus_1);
+                llvm::Value* res = nullptr;
+                if (res->getType()->isIntegerTy()) this->builder->CreateNeg(v);
+                else this->builder->CreateFNeg(v);
+                // llvm::Type* v_type = v->getType();
+                
+                // llvm::Constant* minus_1 = nullptr;
+                // if (v_type->isFloatingPointTy()) minus_1 = llvm::ConstantFP::get(v_type, -1.0);
+                // else minus_1 = llvm::ConstantInt::get(v_type, -1);
+
+                // llvm::Value* res = this->builder->CreateMul(v, minus_1);
                 return std::make_shared<Variable>(res, nullptr);
+            }
+            case AstUnaryOp::OpType::INV:
+            {
+                std::shared_ptr<Variable> id = node.cast_expr->codegen(*this);
+                if (id == nullptr)
+                {
+                    node.errorMsg("invalid operand");
+                    this->error = 1;
+                    return nullptr;
+                }
+                llvm::Value* v = id->value;
+
+                if (!(v->getType()->isIntegerTy()))
+                {
+                    node.errorMsg("bitwise not can only be used to integer");
+                    this->error = 1;
+                    return nullptr;
+                }
+                
+                llvm::Value* res = this->builder->CreateNot(v);
+                
+                return std::make_shared<Variable>(res, nullptr);
+            }
+            case AstUnaryOp::OpType::NOT:
+            {
+                std::shared_ptr<Variable> id = node.cast_expr->codegen(*this);
+                if (id == nullptr)
+                {
+                    node.errorMsg("invalid operand");
+                    this->error = 1;
+                    return nullptr;
+                }
+                llvm::Value* v = id->value;
+
+                if (v->getType()->isIntOrPtrTy())
+                {
+                    llvm::Value* zero = llvm::ConstantInt::get(v->getType(), 0);
+                    llvm::Value* res =  builder->CreateICmpEQ(v, zero);
+                    
+                    return std::make_shared<Variable>(res, nullptr);
+                }
+                else
+                {
+                    llvm::Value* zero = llvm::ConstantFP::get(v->getType(), 0.);
+                    llvm::Value* res =  builder->CreateFCmpOEQ(v, zero);
+                    
+                    return std::make_shared<Variable>(res, nullptr);
+                }   
             }
             default:
                 break;

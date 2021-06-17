@@ -19,12 +19,12 @@ int fib(int x)
 
 int main()
 {
-    long a = 5;
-    long * ptr = &a;
-    short* ptrl = (short*)ptr;
+    double c = 15;
+    int d = !!c;
+    int e = !d;
     
-    printf("%d", *ptrl);
+    printf("%d\n", d);
+    printf("%d\n", e);
 
-    print("violate");
     return 0;
 }

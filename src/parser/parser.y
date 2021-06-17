@@ -186,7 +186,7 @@ unary_op :
 	| '*' { $$ = new AstUnaryOp(AstUnaryOp::OpType::STAR); SETPOS($$);}
 	| '+' { $$ = new AstUnaryOp(AstUnaryOp::OpType::PLUS); SETPOS($$);}
 	| '-' { $$ = new AstUnaryOp(AstUnaryOp::OpType::MINUS); SETPOS($$);}
-	| '~' { $$ = new AstUnaryOp(AstUnaryOp::OpType::STAR); SETPOS($$);}
+	| '~' { $$ = new AstUnaryOp(AstUnaryOp::OpType::INV); SETPOS($$);}
 	| '!' { $$ = new AstUnaryOp(AstUnaryOp::OpType::NOT); SETPOS($$);}
 	;
 

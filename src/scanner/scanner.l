@@ -43,6 +43,7 @@ MULTI       "*"
 DIV         "/"
 MOD         "%"
 SEMI        ";"
+NOT         "!"
 LP          "("
 RP          ")"
 LB          "{"
@@ -143,6 +144,7 @@ STRING      \"(\\.|[^\\"])*\"
 <INITIAL>{COMMA}                     return ',';
 <INITIAL>{LESS}                      return '<';
 <INITIAL>{GREATER}                   return '>';
+<INITIAL>{NOT}                       return '!';
 <INITIAL>{ELLIPSIS}                  return ELLIPSIS;
 
 <INITIAL>.                           printf("Unknown token!n"); yyterminate();
