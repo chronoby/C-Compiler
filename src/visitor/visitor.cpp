@@ -534,8 +534,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstUnaryExpr& node)
                 llvm::Value* v = id->value;
 
                 llvm::Value* res = nullptr;
-                if (res->getType()->isIntegerTy()) this->builder->CreateNeg(v);
-                else this->builder->CreateFNeg(v);
+                if (v->getType()->isIntegerTy()) res = this->builder->CreateNeg(v);
+                else res = this->builder->CreateFNeg(v);
                 // llvm::Type* v_type = v->getType();
                 
                 // llvm::Constant* minus_1 = nullptr;
