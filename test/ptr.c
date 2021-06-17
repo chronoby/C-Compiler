@@ -1,6 +1,6 @@
 /*
 ptr.c
-涉及功能：注释，double，指针，多级指针，指针下标，隐式cast，变量声明和初始化
+涉及功能：注释，double，指针，多级指针，指针下标，隐式cast，变量声明和初始化, if
 
 */
 
@@ -25,6 +25,11 @@ int main()
     if (*(&(**pppc)) == *ppc)
     {
         printf("they are equal(2)\n");
+    }
+
+    if (pppc[0][0] == pc)
+    {
+        printf("they are equal(3)\n");
     }
 
     return 0;
