@@ -14,7 +14,9 @@ int fib(int x)
 int main()
 {
     int a;
+    double c = 10;
     scanf("%d", &a);
-    printf("%d\n", fib(a));
+    c = (double)a;
+    printf("%f\n", c);
     return 0;
 }

@@ -526,6 +526,24 @@ std::shared_ptr<Variable> Visitor::codegen(const AstCastExpr& node)
         {
             return node.unary_expr->codegen(*this);
         }
+        case AstCastExpr::ExprType::CAST:
+        {
+            std::shared_ptr<Variable> before_cast = node.cast_expr->codegen(*this);
+            llvm::Type* type = node.type_spec->codegen(*this);
+            if (before_cast)
+            {
+                llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(before_cast->value, true, type, true);
+                bool able_to_cast = llvm::CastInst::castIsValid(cast_op, before_cast->value->getType(), type);
+                if (!able_to_cast)
+                {
+                    node.errorMsg("unable to do implict cast between these types");
+                    this->error=1;
+                    return nullptr;
+                }
+                llvm::Value* cast_value = this->builder->CreateCast(cast_op, before_cast->value, type);
+                return std::make_shared<Variable>(cast_value, nullptr);
+            }
+        }
         
     }
     return nullptr;
@@ -869,6 +887,10 @@ llvm::Type* Visitor::codegen(const AstTypeSpecifier& node)
         case (AstTypeSpecifier::Type::FLOAT):
         {
             return llvm::Type::getFloatTy(*context);
+        }
+        case (AstTypeSpecifier::Type::VOID):
+        {
+            return llvm::Type::getVoidTy(*context); 
         }
         default:
         {
@@ -1357,6 +1379,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstFunctionDef& node)
     this->envs.back()->functions.insert({direct_declarator->id_name, function});
     this->envs.back()->function_types.insert({direct_declarator->id_name, func_type});
     node.compound_stmt->codegen(*this);
+    if (result_type->isVoidTy()) this->builder->CreateRetVoid();
     this->present_function = old_function;
     delete this->func_params;
     this->func_params = old_function_params;
