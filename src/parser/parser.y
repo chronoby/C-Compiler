@@ -63,6 +63,7 @@ void yyerror(const char *s) {
 
     AstUnaryOp* unary_op;
     AstPointer* pointer;
+    AstTypeName* type_name; 
 
     std::string* string;
 }
@@ -112,6 +113,7 @@ void yyerror(const char *s) {
 %type<jump_stmt> jump_stmt;
 %type<unary_op> unary_op;
 %type<pointer> pointer;
+%type<type_name> type_name;
 
 %token <string> IDENTIFIER INTEGER HEXI OCTAL FLOAT CHAR STRING
 %token <string> VOID TYPE_INT TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_LONG TYPE_SHORT TYPE_SIGNED TYPE_UNSIGNED
@@ -188,9 +190,14 @@ unary_op :
 	| '!' { $$ = new AstUnaryOp(AstUnaryOp::OpType::NOT); SETPOS($$);}
 	;
 
+type_name :
+    type_specifier { $$ = new AstTypeName($1); SETPOS($$); }
+    | type_specifier pointer { $$ = new AstTypeName($1, $2); SETPOS($$); }
+    ;
+
 cast_expr : 
     unary_expr { $$ = new AstCastExpr($1); SETPOS($$);}
-	| '(' type_specifier ')' cast_expr {$$ = new AstCastExpr($4, $2);SETPOS($$);}
+	| '(' type_name ')' cast_expr {$$ = new AstCastExpr($4, $2);SETPOS($$);}
     ;
 
 multiplicative_expr : 

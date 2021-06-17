@@ -554,7 +554,16 @@ std::shared_ptr<Variable> Visitor::codegen(const AstCastExpr& node)
         case AstCastExpr::ExprType::CAST:
         {
             std::shared_ptr<Variable> before_cast = node.cast_expr->codegen(*this);
-            llvm::Type* type = node.type_spec->codegen(*this);
+            llvm::Type* type = node.type_name->type_spec->codegen(*this);
+            if (node.type_name->type == AstTypeName::Type::PTR)
+            {
+                auto ptr = node.type_name->pointer;
+                while (ptr)
+                {
+                    type = type->getPointerTo();
+                    ptr = ptr->next;
+                }
+            }
             if (before_cast)
             {
                 llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(before_cast->value, true, type, true);

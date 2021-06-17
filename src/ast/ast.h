@@ -58,6 +58,7 @@ class AstInitDeclarator;
 class AstStorageClassSpecifier;
 class AstTypeSpecifier;
 class AstTypeQualifier;
+class AstTypeName;
 class AstDeclarator;
 class AstDirectDeclarator;
 class AstPointer;
@@ -199,13 +200,13 @@ public:
     enum class ExprType {UNARY, CAST};
 
     AstCastExpr(AstUnaryExpr* expr): unary_expr(expr), expr_type(ExprType::UNARY) { }
-    AstCastExpr(AstCastExpr* expr, AstTypeSpecifier* type): cast_expr(expr), type_spec(type), expr_type(ExprType::CAST) {}
+    AstCastExpr(AstCastExpr* expr, AstTypeName* type): cast_expr(expr), type_name(type), expr_type(ExprType::CAST) {}
 
     virtual std::shared_ptr<Variable> codegen(Visitor& visitor) override;
     
     ExprType expr_type;
 
-    AstTypeSpecifier* type_spec;
+    AstTypeName* type_name;
 
     AstUnaryExpr* unary_expr;
     AstCastExpr* cast_expr;
@@ -558,6 +559,18 @@ public:
 class AstTypeQualifierList
 {
 
+};
+
+class AstTypeName : public PosEntity
+{
+public:
+    enum class Type {VAR, PTR} type;
+    
+    AstTypeName (AstTypeSpecifier* type_spec): type_spec(type_spec), type(AstTypeName::Type::VAR) {}
+    AstTypeName (AstTypeSpecifier* type_spec, AstPointer* pointer): type_spec(type_spec), pointer(pointer), type(AstTypeName::Type::PTR) {}
+
+    AstTypeSpecifier* type_spec;
+    AstPointer* pointer;
 };
 
 class AstParameterTypeList : public PosEntity
