@@ -19,12 +19,13 @@ int fib(int x)
 
 int main()
 {
-    double c = 15;
-    int d = !!c;
-    int e = !d;
-    
-    printf("%d\n", d);
-    printf("%d\n", e);
+    int c = 0x1F;
+
+    printf("%d\n", c);
+
+    c = 010;
+
+    printf("%d\n", c);
 
     return 0;
 }

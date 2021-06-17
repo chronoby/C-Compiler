@@ -21,9 +21,12 @@ the `test.sh` file is no longer useful.
 ### Data type
 
 - `char`
+- `short`
+- `long`
 - `int`
+- `float`
 - `double`
-- `string`
+- `string (char*)` 
 
 ### Operator
 
