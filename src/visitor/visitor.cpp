@@ -1543,6 +1543,16 @@ std::shared_ptr<Variable> Visitor::codegen(const AstFunctionDef& node)
             {
                 auto type_spec = param_decl->decl_specifiers->type_specs[0];
                 auto type = type_spec->codegen(*this);
+                if (param_decl->declarator->declarator_type == AstDeclarator::DeclaratorType::POINTER)
+                {
+                    auto ptr = param_decl->declarator->pointer;
+                    while (ptr != nullptr)
+                    {
+                        type = type->getPointerTo();
+                        ptr = ptr->next;
+                    }
+                }
+                
                 param_types.push_back(type);
                 std::string para_name = "";
                 if (param_decl->declarator)
