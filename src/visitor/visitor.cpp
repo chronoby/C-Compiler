@@ -290,12 +290,11 @@ std::shared_ptr<Variable> Visitor::codegen(const AstPostfixExpr& node)
             // auto index = llvm::ConstantInt::get(*context, llvm::APInt(32, 3, true));
             // auto addr = llvm::GetElementPtrInst::Create(post_value->addr, { zero, index });
 
-            // bullshit
-            auto element = builder->CreateLoad(post_value->value);
-            llvm::Value* addr = nullptr;
-            if (!(element->getType()->isArrayTy()))
+            llvm::Value* addr;
+
+            if (!(post_value->value->getType()->getPointerElementType()->isArrayTy()))
             {
-                addr = builder->CreateGEP(element, {zero, ind_value->value});
+                addr = builder->CreateGEP(post_value->value->getType()->getPointerElementType(), post_value->value, ind_value->value);
             }
             else
             {
@@ -1250,10 +1249,23 @@ std::shared_ptr<Variable> Visitor::codegen(const AstDecl& node)
                 else if(declarator->direct_declarator->declarator_type == AstDirectDeclarator::DeclaratorType::BR)
                 {
                     std::vector<llvm::Constant*> values;
+                    llvm::Type* elem_type = var_type->getArrayElementType();
                     
                     for(auto init : initializer->initializer_list->initializer_list)
                     {
                         auto value = init->codegen(*this)->value;
+                        if (value->getType() != elem_type)
+                        {
+                            llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(value, true, elem_type, true);
+                            bool able_to_cast = llvm::CastInst::castIsValid(cast_op, value->getType(), elem_type);
+                            if (!able_to_cast)
+                            {
+                                node.errorMsg("unable to do implict cast between these types");
+                                this->error=1;
+                                return nullptr;
+                            }
+                            value = this->builder->CreateCast(cast_op, value, elem_type);
+                        }
                         values.push_back(llvm::dyn_cast<llvm::Constant>(value));
                     }
                     auto initializer_value = llvm::ConstantArray::get(llvm::dyn_cast<llvm::ArrayType>(var_type), values);
@@ -1629,7 +1641,7 @@ Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
     auto r_type = rhs->getType();
     if(l_type == r_type)
     {
-        if(l_type->isIntegerTy())
+        if(l_type->isIntOrPtrTy())
         {
             return CastRes::INT;
         }
@@ -1657,7 +1669,7 @@ Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
                 return CastRes::WRONG;
             }
             rhs = this->builder->CreateCast(cast_op, rhs, l_type);
-            if(l_type->isIntegerTy())
+            if(l_type->isIntOrPtrTy())
             {
                 return CastRes::INT;
             }
@@ -1676,7 +1688,7 @@ Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
                 return CastRes::WRONG;
             }
             lhs = this->builder->CreateCast(cast_op, lhs, r_type);
-            if(r_type->isIntegerTy())
+            if(r_type->isIntOrPtrTy())
             {
                 return CastRes::INT;
             }
