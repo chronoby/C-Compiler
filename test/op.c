@@ -17,14 +17,24 @@ int main()
     double g = 7.5;
     double arr2[8] = {7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.};
     double h = a + g;
-    double i = e * f;
-    int j = d % c;
+    double i = d - c;
+    double j = e * f;
+    int k = d % c;
+
     // int k = f % c; // error!
     arr2[3] = 10.0;
     
-    printf("%lf %lf %d\n", h, i, j);
+    printf("%lf %lf %lf %d\n", h, i, j, k);
     printf("%d %d %d %d %d\n", arr1[0], arr1[1], arr1[2], arr1[3], arr1[4]);
     printf("%lf %lf %lf %lf %lf\n", arr2[0], arr2[1], arr2[2], arr2[3], arr2[4]);
+    if(k == 1)
+        printf("bool1\n");
+    if(k != 1)
+        printf("bool2\n");
+    if(k > 2)
+        printf("bool3\n");
+    if(k == 1 || c != 3)
+        printf("bool4\n");
     
     return 0;
 }
