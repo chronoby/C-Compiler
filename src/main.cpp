@@ -22,7 +22,8 @@ void help_msg()
     std::cout << "Options:" << std::endl
               << " -l <FILE_NAME>: write llvm IR code into <FILE_NAME>" << std::endl
               << " -s <FILE_NAME>: write assembly code into <FILE_NAME>" << std::endl
-              << " -o <FILE_NAME>: generate execuable code with name <FILE_NAME>" << std::endl;
+              << " -o <FILE_NAME>: generate execuable code with name <FILE_NAME>" << std::endl
+              << " -v : draw the abstract sytax tree with name <FILE_NAME>" << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -32,6 +33,7 @@ int main(int argc, char **argv)
     bool ir = false;
     bool asm_ = false;
     bool obj = false;
+    bool vis = false;
 
     char* ir_filename = "a.ll";
     char* asm_filename = "a.s";
@@ -66,6 +68,10 @@ int main(int argc, char **argv)
                     obj = true;
                     if (i + 1 < argc && strcmp(argv[i + 1], "-l") && strcmp(argv[i + 1], "-s") && strcmp(argv[i + 1], "-o")) obj_filename = argv[i + 1];
                 }
+                else if (!strcmp(argv[i], "-v"))
+                {
+                    vis = true;
+                }
             }
 
             if (!(ir || asm_ || obj)) ir = true;
@@ -91,6 +97,13 @@ int main(int argc, char **argv)
 
             if (!ir) remove(ir_filename);
             if (!asm_) remove(asm_filename);
+
+            if (vis)
+            {
+                std::string inst = std::string("./scanner ") + path + " > tmp_out.py";
+                system(inst.c_str());
+                system("python tmp_out.py");
+            }
         }
         else
         {
