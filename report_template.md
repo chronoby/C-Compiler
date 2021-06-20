@@ -124,10 +124,9 @@ public:
 
 ## 3.3 数据类型检查与转换
 
-对于各种二元运算符表达式，我们进行了操作数类型的类型检查与转换：
-
-- 若两个操作数类型相同且与运算符相符，则按原类型进行运算；
-- 若两个操作数类型不同，则尝试按两个操作数的宽度进行从窄到宽的隐式类型转换。若转换可以进行，则按类型转换后的值进行操作；若转换不可进行，则进行相应报错并返回。
+- 对于各种二元运算符表达式，我们进行了操作数类型的类型检查与转换：
+  - 若两个操作数类型相同且与运算符相符，则按原类型进行运算；
+  - 若两个操作数类型不同，则尝试按两个操作数的宽度进行从窄到宽的隐式类型转换。若转换可以进行，则按类型转换后的值进行操作；若转换不可进行，则进行相应报错并返回。
 
 ```cpp
 Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
@@ -157,6 +156,9 @@ Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
 }
 ```
 
+- 对于赋值运算符，我们同样进行了隐式类型转换，即当赋值运算符两边的类型不一致时，尝试进行类型转换，根据类型转换的结果进行相应的操作；
+- 我们还提供了 C 风格的强制类型转换，实现方式同上，不再赘述。
+
 ## 3.4 错误检查
 语义分析时产生的错误，主要包括使用未定义的函数或变量，变量重定义等。为了方便报错，我们在PosEntity部分实现了errorMsg和warningMsg两个方法，方便显示错误发生的位置和报错信息，其效果可参考第6章的测试部分。
 同时，我们在visitor中维护一个error变量，标志代码中是否有错。因为如果在语义分析中发生错误，后续生成的代码也必定是不可用的。因此在发生错误时，我们将error置为1。当Visitor完成遍历AST之后，若检查到error值为1，则放弃后续操作。
@@ -166,8 +168,8 @@ Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
 我们编译器的代码生成部分借助了 LLVM 工具。具体步骤为：
 
 - 编写每一个 AST 节点的 codegen 函数，在合适位置用 LLVM C++ API 插入 LLVM IR 的指令，以生成 LLVM IR 文件(.ll)；
-- 用 llc 工具将 LLVM IR 转化为对应环境上的汇编代码(.s)；
-- 汇编代码即可使用 gcc 编译为对应环境上的可执行文件并运行。
+- 用 llc 工具将 LLVM IR 转化为对应平台上的汇编代码(.s)；
+- 汇编代码即可用 gcc 编译为对应平台上的可执行文件并运行。
 
 ## 4.1 访问者模式(Visitor pattern)
 
@@ -233,7 +235,7 @@ llvm::GlobalVariable *var = new llvm::GlobalVariable(
 
 ## 4.3 运算符
 
-LLVM 提供了丰富的运算符指令，如 add, sub, mul, sdiv, logical_and, logical_or等，可以直接将操作数 codegen 操作得到的值作为参数得到相应的指令。在插入每个运算符之前，我们首先对操作数进行了类型检查和必要的类型转换。以 `+` 运算符为例：
+LLVM 提供了丰富的运算指令，如 add, sub, mul, sdiv, logical_and, logical_or等，可以直接将操作数 codegen 操作得到的值作为参数得到相应的指令。在插入每个运算符之前，我们首先对操作数进行了类型检查和必要的类型转换，并根据操作数的类型选择整形和浮点型运算指令。以 `+` 运算符为例：
 
 ```cpp
 std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
@@ -265,7 +267,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
 
 - if-else 条件分支
 
-if-else分支需要三个 basicblock，分别为 then，else，ifcont。具体实现为：首先创建三个 basicblock，然后调用 `builder->CreateCondBr` 创建条件分支指令，根据 if 表达式的 bool 值选择分支至 then_block 还是 else_block；接着分别在每个 block 内进行对应的代码生成，每个 block 的末尾跳转至 ifcont_block。if 条件分支则只需在 if-else 的基础上去掉 else block，在此不再赘述。
+if-else分支需要三个 basicblock，分别为 then，else，ifcont。具体实现为：首先创建三个 basicblock，然后调用 `builder->CreateCondBr` 创建条件分支指令，运行时会根据 if 表达式的 bool 值选择分支至 then_block 或 else_block；接着分别在每个 block 内进行对应的代码生成，每个 block 的末尾跳转至 ifcont_block。if 条件分支则只需在 if-else 的基础上去掉 else block。
 
 ```cpp
 std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
@@ -336,8 +338,8 @@ std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
 
 - break 和 continue
 
-break，即跳转至 cont_block, continue，跳转至 loop_block.
-为了使 break 和 continue 语句的 codegen 函数可以访问到上述两个标签，添加 visitor 的成员变量，用来保存当前循环的 loop_block 和 cont_block。这两个成员需要在进入函数和退出函数时进行相应的赋值操作来打到正确的效果。
+  - break，即跳转至 cont_block；continue，跳转至 loop_block.
+  - 为了使 break 和 continue 语句的 codegen 函数可以访问到上述两个标签，添加 visitor 的成员变量，用来保存当前循环的 loop_block 和 cont_block。这两个成员需要在进入函数和退出函数时进行相应的赋值操作来打到正确的效果。
 
 ```cpp
 llvm::BasicBlock* tmp_loop_block;
@@ -456,7 +458,7 @@ this->builder->SetInsertPoint(oldBlock);
 
 我们的测试包含 9 个测试样例，对编译器的各个特性进行了测试。
 
-注：第一个样例包含了所有的源文件、中间代码、汇编、运行结果，后续样例省略中间代码和汇编。
+注：第一个样例包含了所有的源文件、中间代码、汇编代码、运行结果，后续样例省略中间代码和汇编代码。
 
 ## 6.1 fib.c
 
@@ -781,7 +783,7 @@ int main()
 
 ## 6.3 cal.c
 
-- 涉及的特性：运算。
+- 涉及的特性：二元运算，printf。
 
 - 源代码：
 
