@@ -1,4 +1,0 @@
-./compiler
-llc out.ll
-
-
