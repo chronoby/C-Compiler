@@ -76,15 +76,57 @@ make
 可显示帮助信息。
 
 # 2. 词法分析 & 语法分析
+
 # 3. 语义分析
+
+在通过语法分析完成AST的构建后，我们使用访问者模式对AST进行遍历（详见第4章），进行语义分析与代码生成。语义分析和代码生成在同一过程中生成，二者耦合紧密。其中，语义分析主要进行符号表的构建，通过符号表将标识符（identifier）映射到对应的变量与函数，同时在运算过程中进行数据类型的检查与转换，并检查代码中与上下文相关的错误，如使用未定义的变量、变量重复定义等。
 
 ## 3.1 符号表与符号表栈
 
+我们编译器的符号表使用C++的`std::map`实现，将标识符字符串映射为对应的变量或函数。符号表的定义如下：
+```cpp
+std::map<std::string, llvm::Value*> locals;
+std::map<std::string, llvm::Function*> functions;
+std::map<std::string, llvm::FunctionType*> function_types;
+```
+在进行语义分析时，我们可以根据AST的当前节点类型判断标识符是函数名称还是变量名称，从而可以在对应的符号表中索取相应的函数或变量。`locals`将变量名映射为包含变量地址的`llvm::Value*`，`functions`将函数名映射为对应的`llvm::Function*`，`function_types`则可根据函数名得到函数的返回类型和参数类型。
+
+为了方便处理变量作用域的问题，我们使用符号表栈的方式。即将符号表封装到一个类`LocalEnv`中。`LocalEnv`的定义为：
+```cpp
+class LocalEnv
+{
+public:
+    std::map<std::string, llvm::Value*> locals;
+    std::map<std::string, llvm::Function*> functions;
+    std::map<std::string, llvm::FunctionType*> function_types;
+    // function_defined is not used
+    std::map<std::string, bool> function_defined; 
+};
+```
+用于生成代码的`Visitor`维护一个符号表栈。（通过`std::vector<LocalEnv*>`）实现。每进入一个大括号，就在栈顶压入一个新的符号表代表当前环境。离开一个大括号时，将栈顶的元素出栈，对应符号表中的变量将无法访问。其中，栈底的一个符号表代表全局变量与函数。
+
+在声明变量的时候，除了调用llvm API创建变量，编译器还会将对应的变量名及其地址放入栈顶的符号表中，代表当前作用下的局部变量。符号表出栈时即离开该变量的作用域，无法继续访问。在访问变量时，会按照从栈顶到栈底的顺序遍历符号表栈（若在函数内部会优先从函数参数中查找），直到找到第一个具有该名称的变量，即作用域内的同名变量会覆盖作用域外的变量。这与C语言的标准语法相同。若遍历整个栈也没有找到变量，则报错。
+
 ## 3.2 变量的读写
+
+在通过标识符访问变量时，有时我们需要的是变量的值（如变量作为右值时），有时我们需要变量的地址（如变量作为左值时）。同时，由于包含指针和数组数据类型，我们需要支持对变量的取地址和按地址访问的操作。这种情况下，若将变量的地址和值分开单独访问，非常不方便。因此我们实现了一个`Variable`类，将变量的地址和值捆绑在一起：
+```cpp
+class Variable
+{
+public:
+    llvm::Value* value;
+    llvm::Value* addr;
+
+    Variable(llvm::Value* value, llvm::Value* addr): value(value), addr(addr) {}
+};
+```
+访问变量时，我们可以从符号表中获得变量的地址，再使用`CreateLoad`方法读取变量的值，构造一个Variable对象并返回。
 
 ## 3.3 数据类型检查与转换
 
 ## 3.4 错误检查
+语义分析时产生的错误，主要包括使用未定义的函数或变量，变量重定义等。为了方便报错，我们在PosEntity部分实现了errorMsg和warningMsg两个方法，方便显示错误发生的位置和报错信息，其效果可参考第6章的测试部分。
+同时，我们在visitor中维护一个error变量，标志代码中是否有错。因为如果在语义分析中发生错误，后续生成的代码也必定是不可用的。因此在发生错误时，我们将error置为1。当Visitor完成遍历AST之后，若检查到error值为1，则放弃后续操作。
 
 # 4. 代码生成
 
@@ -141,6 +183,20 @@ std::shared_ptr<Variable> Visitor::codegen(const AstNode& node)
 ```
 
 ## 4.2 声明和初始化
+对于变量的声明，全局变量和局部变量略有不同。全局变量需要使用`llvm::GlobalVariable`来定义，如：
+```cpp
+llvm::GlobalVariable *var = new llvm::GlobalVariable(
+    *(this->module),
+    var_type,
+    false,
+    llvm::GlobalValue::ExternalLinkage,
+    initializer_v,
+    var_name
+);
+```
+需要注意的是，全局变量定义时的初始化值initilaizer_v必须为llvm::Constant。因此在创建全局变量前会使用`llvm::isa<llvm::Constant>`来判断该llvm::Value是否为常量，若否则报错。
+
+而创建局部变量，则需要使用`llvm::IRBuilder::CreateAlloca()`来为对应的变量分配内存，并调用`llvm::IRBuilder::CreateStore()`来为其赋初始化值。变量为局部变量还是全局变量可以由Visitor维护的符号表栈的元素数判断。在创建完变量之后，要将变量的映射关系插入到符号表中。
 
 ## 4.3 运算符
 
@@ -280,10 +336,97 @@ llvm::BasicBlock* tmp_loop_block;
 llvm::BasicBlock* tmp_cont_block;
 ```
 
-
 ## 4.5 函数
+在函数定义时，首先要获得函数的类型（llvm::FuncionType)，包括参数类型和返回类型。默认的返回类型为int型。该部分代码如下：
+
+```cpp
+llvm::Type* result_type = llvm::Type::getInt32Ty(*context);
+auto new_param = new std::map<std::string, unsigned>();
+
+auto decl_specs = node.decl_specifiers;
+if (decl_specs && decl_specs->type_specs.size() > 0)
+{  
+    auto type_specs = decl_specs->type_specs[0];
+    result_type = type_specs->codegen(*this);
+}
+
+llvm::FunctionType* func_type;
+switch(direct_declarator->declarator_type)
+{
+    case AstDirectDeclarator::DeclaratorType::FUNC_EMPTY:
+    {
+        func_type = llvm::FunctionType::get(result_type, false);
+        break;
+    }
+    case AstDirectDeclarator::DeclaratorType::FUNC_PARAM:
+    {
+        std::vector<llvm::Type*> param_types;
+        bool isVarArg = direct_declarator->param_type_list->isVarArg;
+        auto parameter_list_node = direct_declarator->param_type_list->param_list;
+        unsigned para_num = 0;
+        for (auto param_decl : parameter_list_node->parameter_list)
+        {
+            auto type_spec = param_decl->decl_specifiers->type_specs[0];
+            auto type = type_spec->codegen(*this);
+            if (param_decl->declarator->declarator_type == AstDeclarator::DeclaratorType::POINTER)
+            {
+                auto ptr = param_decl->declarator->pointer;
+                while (ptr != nullptr)
+                {
+                    type = type->getPointerTo();
+                    ptr = ptr->next;
+                }
+            }
+            
+            param_types.push_back(type);
+            std::string para_name = "";
+            if (param_decl->declarator)
+            {
+                para_name = param_decl->declarator->direct_declarator->id_name;
+                new_param->insert({para_name, para_num++});
+            }
+            else
+            {
+                para_num++;
+            }
+        }
+        func_type = llvm::FunctionType::get(result_type, param_types, isVarArg);
+        break;
+    }
+}
+```
+获得函数原型后，调用`llvm::Function::Create`即可创建函数。在函数内部创建`BasicBlock`之后，将`Builder`的插入点设置为当前`BasicBlock`，即可在函数内部插入语句。创建函数后，要将函数及其类型的映射插入到符号表中。该部分代码如下：
+```cpp
+llvm::Function* function = llvm::Function::Create(func_type, llvm::GlobalValue::ExternalLinkage, direct_declarator->id_name, &*this->module);
+llvm::BasicBlock* entry = llvm::BasicBlock::Create(*context, "entry", function, nullptr);
+llvm::BasicBlock* oldBlock = this->builder->GetInsertBlock();
+this->builder->SetInsertPoint(entry);
+auto old_function = this->present_function;
+auto old_function_params = this->func_params;
+this->present_function = function;
+this->func_params = new_param;
+
+if (this->envs.back()->functions.find(direct_declarator->id_name) == this->envs.back()->functions.end())
+{
+    this->envs.back()->functions.insert({direct_declarator->id_name, function});
+    this->envs.back()->function_types.insert({direct_declarator->id_name, func_type});
+}
+
+this->envs.back()->function_defined.insert({direct_declarator->id_name, true});
+
+node.compound_stmt->codegen(*this);
+if (result_type->isVoidTy()) this->builder->CreateRetVoid();
+this->present_function = old_function;
+delete this->func_params;
+this->func_params = old_function_params;
+this->builder->SetInsertPoint(oldBlock);
+```
+调用函数时，只需使用`llvm::IRBuilder::CreateCall`即可进行对函数的调用。在实现`printf`和`scanf`的调用的时候，需要使用`setCallingConv(llvm::CallingConv::C)`来实现对C库函数的调用。
 
 ## 4.6 指针
+声明指针型变量的时候，在语法分析阶段会建立`AstPointer`型节点。`AstPointer`之间可以构成一个链表，链表的长度由定义指针的*的个数决定，从而判断出指针的层级。根据指针的不同层级，多次调用`llvm::Type::getPointerTo()`，即可获得相应的指针类型。
+
+为了使用指针，还需要定义取地址操作`&`和按地址取值操作`*`。由于我们在访问变量时使用了`Variable`类（见3.2），可方便地从一个变量访问其地址或根据变量的值访问对应位置的变量。同时，指针还支持按下标访问的`[]`操作符，其使用方法和数组相同。
 
 ## 4.7 数组
 
