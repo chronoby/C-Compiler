@@ -1226,7 +1226,7 @@ if(mistake==0){
 
 语法树的可视化通过pyecharts包中的Tree()类完成，为了便于渲染，我们对类进行继承并修改了最终生成的html文件中js代码的位置，使其直接引用本地js代码，加快渲染速度，最终渲染结果如下所示
 
-![avatar](test/result/printast.png)
+![avatar](test/result/print.png)
 
 注意，图中的实心节点表示可以通过鼠标点击的方式继续展开，通过这样的方式增加互动性。
 
