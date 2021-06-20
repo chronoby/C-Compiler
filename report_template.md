@@ -84,15 +84,48 @@ make
 
 ## 3.3 数据类型检查与转换
 
+对于各种二元运算符表达式，我们进行了操作数类型的类型检查与转换：
+
+- 若两个操作数类型相同且与运算符相符，则按原类型进行运算；
+- 若两个操作数类型不同，则尝试按两个操作数的宽度进行从窄到宽的隐式类型转换。若转换可以进行，则按类型转换后的值进行操作；若转换不可进行，则进行相应报错并返回。
+
+```cpp
+Visitor::CastRes Visitor::type_check(llvm::Value*& lhs, llvm::Value*& rhs)
+{
+    auto l_type = lhs->getType();
+    auto r_type = rhs->getType();
+    if(l_type == r_type)
+    {
+        return type;
+    }
+    else
+    {
+        if(CastOrder[l_type] > CastOrder[r_type])
+        {
+          llvm::Instruction::CastOps cast_op = llvm::CastInst::getCastOpcode(rhs, true, l_type, true);
+          bool able_to_cast = llvm::CastInst::castIsValid(cast_op, r_type, l_type);
+          if (!able_to_cast)
+          {
+              return CastRes::WRONG;
+          }
+          rhs = this->builder->CreateCast(cast_op, rhs, l_type);
+          return type;
+        }
+        else
+            // ...
+    }
+}
+```
+
 ## 3.4 错误检查
 
 # 4. 代码生成
 
 我们编译器的代码生成部分借助了 LLVM 工具。具体步骤为：
 
-- 编写每一个 AST 节点的 codegen 函数，在合适位置用 LLVM C++ API 插入 LLVM IR 的指令，以生成 LLVM IR 文件(.ll)
-- 用 llc 工具将 LLVM IR 转化为对应环境上的汇编代码(.s)
-- 汇编代码即可使用 gcc 编译为对应环境上的可执行文件并运行
+- 编写每一个 AST 节点的 codegen 函数，在合适位置用 LLVM C++ API 插入 LLVM IR 的指令，以生成 LLVM IR 文件(.ll)；
+- 用 llc 工具将 LLVM IR 转化为对应环境上的汇编代码(.s)；
+- 汇编代码即可使用 gcc 编译为对应环境上的可执行文件并运行。
 
 ## 4.1 访问者模式(Visitor pattern)
 
@@ -144,7 +177,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstNode& node)
 
 ## 4.3 运算符
 
-LLVM 提供了丰富的运算符指令，如 add, sub, mul, sdiv, logical_and, logical_or等，可以直接将操作数 codegen 操作得到的值作为参数得到相应的指令。在插入每个运算符之前，我们首先对操作数进行了类型检查和必要的类型转换。以 `+` 运算符为例
+LLVM 提供了丰富的运算符指令，如 add, sub, mul, sdiv, logical_and, logical_or等，可以直接将操作数 codegen 操作得到的值作为参数得到相应的指令。在插入每个运算符之前，我们首先对操作数进行了类型检查和必要的类型转换。以 `+` 运算符为例：
 
 ```cpp
 std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
@@ -168,12 +201,6 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
         this->error = 1;
         return nullptr;
     }
-    else
-    {
-        // true?
-        // unknown type
-        return nullptr;
-    }
 ```
 
 ## 4.4 条件分支和循环
@@ -182,7 +209,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstAdditiveExpr& node)
 
 - if-else 条件分支
 
-if-else分支需要三个 basicblock，分别为 then，else，ifcont。if 条件分支则只需在 if-else 的基础上去掉 else block，在此不再赘述。
+if-else分支需要三个 basicblock，分别为 then，else，ifcont。具体实现为：首先创建三个 basicblock，然后调用 `builder->CreateCondBr` 创建条件分支指令，根据 if 表达式的 bool 值选择分支至 then_block 还是 else_block；接着分别在每个 block 内进行对应的代码生成，每个 block 的末尾跳转至 ifcont_block。if 条件分支则只需在 if-else 的基础上去掉 else block，在此不再赘述。
 
 ```cpp
 std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
@@ -192,32 +219,21 @@ std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
     llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*context, "then", parent_function);
     llvm::BasicBlock* false_block = llvm::BasicBlock::Create(*context, "else");
     llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(*context, "ifcont");
-
     builder->CreateCondBr(cond, true_block, false_block);
 
     // then block
     builder->SetInsertPoint(true_block);
-    auto true_class = node.stmt1->codegen(*this);
-    llvm::Value* true_value = nullptr;
-    if(true_class)
-    {
-        true_value = true_class->value;
-    }
+    llvm::Value* true_value = node.stmt1->codegen(*this)->value;
     builder->CreateBr(merge_block);
     true_block = builder->GetInsertBlock();
 
     // else block
     parent_function->getBasicBlockList().push_back(false_block);
     builder->SetInsertPoint(false_block);
-
-    llvm::Value* false_value = nullptr;
-    auto false_class = node.stmt2->codegen(*this);
-    if(false_class)
-    {
-        false_value = false_class->value;
-    }
+    llvm::Value* false_value = node.stmt2->codegen(*this)->value;
+    
+    // ifcont block
     builder->CreateBr(merge_block);
-
     false_block = builder->GetInsertBlock();
     parent_function->getBasicBlockList().push_back(merge_block);
     builder->SetInsertPoint(merge_block);
@@ -227,7 +243,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstSelectionStmt& node)
 
 - while 循环
 
-while 循环与 if 条件分支语句类似，需要三个 basicblock，分别为 loop，loopin，loopcont，实现正确的跳转即可
+while 循环与 if 条件分支语句类似，需要三个 basicblock，分别为 loop，loopin，loopcont，实现正确的跳转即可：
 
 ```cpp
 std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
@@ -237,22 +253,14 @@ std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
     llvm::BasicBlock* loop_block = llvm::BasicBlock::Create(*context, "loop", parent_function);
     llvm::BasicBlock* true_block = llvm::BasicBlock::Create(*context, "loopin", parent_function);
     llvm::BasicBlock* cont_block = llvm::BasicBlock::Create(*context, "loopcont");
-    tmp_loop_block = loop_block;
-    tmp_cont_block = cont_block;
 
     builder->CreateBr(loop_block);
     builder->SetInsertPoint(loop_block);
-    
     auto cond = node.expr->codegen(*this)->value;
-    if(!cond)
-    {
-        return nullptr;
-    }
     builder->CreateCondBr(cond, true_block, cont_block);
 
     // then block
     builder->SetInsertPoint(true_block);
-    
     auto true_class = node.stmt->codegen(*this);
     llvm::Value* true_value = nullptr;
     if(true_class)
@@ -273,7 +281,7 @@ std::shared_ptr<Variable> Visitor::codegen(const AstIterStmt& node)
 - break 和 continue
 
 break，即跳转至 cont_block, continue，跳转至 loop_block.
-为了使 break 和 continue 语句的 codegen 函数可以访问到上述两个标签，添加 visitor 的成员变量，用来保存当前循环的 loop_block 和 cont_block。这两个成员需要在进入函数和退出函数时进行相应的赋值操作来打到正确的效果
+为了使 break 和 continue 语句的 codegen 函数可以访问到上述两个标签，添加 visitor 的成员变量，用来保存当前循环的 loop_block 和 cont_block。这两个成员需要在进入函数和退出函数时进行相应的赋值操作来打到正确的效果。
 
 ```cpp
 llvm::BasicBlock* tmp_loop_block;
@@ -289,12 +297,12 @@ llvm::BasicBlock* tmp_cont_block;
 
 - 数组声明
 
-数组的 LLVM 类型可通过 `llvm::ArrayType::get(var_type, num);` 获得，全局变量数组和局部变量数组分别调用 `llvm::GlobalVariable` 和 `builder->CreateAlloca` 即可创建数组类型
+数组的 LLVM 类型可通过 `llvm::ArrayType::get(var_type, num);` 获得，全局变量数组和局部变量数组分别调用 `llvm::GlobalVariable` 和 `builder->CreateAlloca` 即可创建数组类型。
 
 - 数组初始化
 
 数组的 initializer 可通过函数 `llvm::ConstantArray::get(llvm::dyn_cast<llvm::ArrayType>(var_type), values)` 来获得。
-对于全局数组，initializer 可作为 `llvm::GlobalVariable` 的一个参数直接进行初始化；而对于局部数组，可调用 `builder->CreateStore` 进行赋值从而实现初始化
+对于全局数组，initializer 可作为 `llvm::GlobalVariable` 的一个参数直接进行初始化；而对于局部数组，可调用 `builder->CreateStore` 进行赋值从而实现初始化。
 
 - 数组访问
 
@@ -303,14 +311,15 @@ llvm::BasicBlock* tmp_cont_block;
 # 5. 可视化
 # 6. 测试
 
-我们的测试包含 9 个测试样例，对编译器的各个特性进行了测试
+我们的测试包含 9 个测试样例，对编译器的各个特性进行了测试。
 
-注：第一个样例包含了所有的源文件、中间代码、汇编、运行结果，后续样例省略中间代码和汇编
+注：第一个样例包含了所有的源文件、中间代码、汇编、运行结果，后续样例省略中间代码和汇编。
 
 ## 6.1 fib.c
 
-- 涉及的特性： 含参的函数，全局和局部变量, 整数运算，递归，输入输出，注释, if-else, while, logical-or, break
-
+- 涉及的特性： 含参的函数，全局和局部变量, 整数运算，递归，输入输出, if-else, while, logical-or, break；
+  - fib() 函数中涉及了if-else 和 递归；
+  - main() 函数中涉及 scanf, while, break, printf, 函数调用等特性。
 - 源代码：
 
 ```c
@@ -352,7 +361,7 @@ int main()
 }
 ```
 
-- LLVM IR
+- LLVM IR：
 
 ```
 ; ModuleID = 'main'
@@ -433,7 +442,7 @@ declare i32 @printf(i8*, ...)
 declare i32 @scanf(i8*, ...)
 ```
 
-- 汇编
+- 汇编：
 
 ```asm
 	.text
@@ -581,7 +590,7 @@ a:
 
 ```
 
-- 运行结果
+- 运行结果：
 
 ![avatar](test/result/fib.png)
 
@@ -629,9 +638,9 @@ int main()
 
 ## 6.3 cal.c
 
-- 涉及的特性：运算
+- 涉及的特性：运算。
 
-- 源代码
+- 源代码：
 
 ```c
 int main()
@@ -651,15 +660,15 @@ int main()
 }
 ```
 
-- 运行结果
+- 运行结果：
 
 ![avatar](test/result/cal.png)
 
 ## 6.4 cast.c
 
-- 涉及的特性：隐式、显式cast，指针和数组
+- 涉及的特性：隐式、显式cast，指针和数组。
 
-- 源代码
+- 源代码：
 
 ```c
 int main()
@@ -693,15 +702,15 @@ int main()
 }
 ```
 
-- 运行结果
+- 运行结果：
 
 ![avatar](test/result/cast.png)
 
 ## 6.5 divisor.c
 
-- 涉及的特性：求因数
+- 涉及的特性：求因数。
 
-- 源代码
+- 源代码：
 
 ```c
 void divisor(int c)
@@ -731,15 +740,16 @@ int main()
 }
 ```
 
-- 运行结果
+- 运行结果：
 
 ![avatar](test/result/divisor.png)
 
 ## 6.6 fake.c
 
-- 涉及的特性：错误处理
+- 涉及的特性：错误处理。
+- 说明：本段代码包含四处错误：变量重复定义，变量未定义，赋值错误，函数未定义。我们的程序对每个错误的行号、列号和具体错误信息进行了输出。
 
-- 源代码
+- 源代码：
 
 ```c
 int main()
@@ -753,15 +763,15 @@ int main()
 }
 ```
 
-- 运行结果
+- 运行结果：
 
 ![avatar](test/result/fake.png)
 
 ## 6.7 local.c
 
-- 涉及的特性：函数调用，变量作用域
-
-- 源代码
+- 涉及的特性：函数调用，变量作用域。
+- 说明：按照 C 语言规范，main函数内对 `c` 的访问为局部变量，而 `setC` 和 `echoC` 分别修改和输出全局变量 `c` 的值。
+- 源代码：
 
 ```c
 double c;
@@ -796,9 +806,9 @@ int main()
 
 ## 6.8 op.c
 
-- 涉及的特性：运算符类型检查，隐式类型转换,报错
-
-- 源代码
+- 涉及的特性：运算符类型检查，隐式类型转换,报错；
+  - 对变量h, i, j 的赋值涉及了二元运算符和赋值运算符的隐式类型转换，对变量 k 的赋值涉及了操作数的类型检查(若模运算的操作数不为整数即进行报错)。
+- 源代码：
 
 ```c
 int arr1[5] = {1, 2, 3, 4, 5};
@@ -844,7 +854,7 @@ int main()
 ## 6.9 ptr.c
 
 - 涉及的特性：double，指针，多级指针，指针下标，隐式cast，变量声明和初始化, if
-
+  - 包含多级指针，以及多级指针的取值操作，同时可以对指针进行下标取值操作
 - 源代码
 
 ```c
